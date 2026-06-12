@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCS Agentic Enterprise Platform</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">OCS</span>
+      <div>
+        <h1>Agentic Enterprise Platform</h1>
+        <p class="subtitle">Agentes de IA locales, auditables y extensibles</p>
+      </div>
+    </div>
+    <div class="status-group">
+      <div class="status-pill" id="status-api" title="Estado del backend">API: <span>...</span></div>
+      <div class="status-pill" id="status-ollama" title="Estado de Ollama">Ollama: <span>...</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="assistant">Asistente</button>
+    <button class="tab" data-tab="executions">Ejecuciones</button>
+    <button class="tab" data-tab="documents">Documentos</button>
+    <button class="tab" data-tab="tools">Herramientas</button>
+  </nav>
+
+  <main>
+    <!-- ================= ASISTENTE ================= -->
+    <section class="panel active" id="panel-assistant">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Nueva tarea</h2>
+
+          <label class="field-label">Modo de selección de agente</label>
+          <div class="mode-toggle">
+            <label><input type="radio" name="mode" value="auto" checked /> Auto (decide el router)</label>
+            <label><input type="radio" name="mode" value="manual" /> Manual</label>
+          </div>
+
+          <div id="agent-select-wrap" class="hidden">
+            <label class="field-label" for="agent-select">Agente</label>
+            <select id="agent-select"></select>
+            <p class="hint" id="agent-description"></p>
+          </div>
+
+          <label class="field-label" for="model-select">Modelo Ollama</label>
+          <select id="model-select">
+            <option value="">(modelo por defecto)</option>
+          </select>
+
+          <label class="field-label" for="task-input">Tarea</label>
+          <textarea id="task-input" rows="6"
+            placeholder="Ej.: Analiza esta alerta Wazuh... / Hazme una propuesta comercial para... / Resume este contrato..."></textarea>
+
+          <label class="field-label" for="context-input">Contexto adicional (opcional: datos, tabla, alerta JSON, contrato...)</label>
+          <textarea id="context-input" rows="5" placeholder="Pega aquí datos o texto de apoyo"></textarea>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="use-documents" />
+            Usar documentos subidos como contexto (RAG local)
+          </label>
+
+          <div class="actions-row">
+            <button id="btn-route" class="btn secondary">Previsualizar enrutado</button>
+            <button id="btn-execute" class="btn primary">Ejecutar</button>
+          </div>
+          <p id="route-preview" class="route-preview hidden"></p>
+        </div>
+
+        <div class="card" id="result-card">
+          <h2>Resultado</h2>
+          <div id="result-empty" class="empty-state">
+            Ejecuta una tarea para ver aquí la respuesta, la confianza y el Chain-of-Work.
+          </div>
+          <div id="result-content" class="hidden">
+            <div class="result-meta" id="result-meta"></div>
+            <div id="result-error" class="error-box hidden"></div>
+            <div class="result-output markdown" id="result-output"></div>
+
+            <details id="result-verification">
+              <summary>Validación de la respuesta</summary>
+              <ul id="verification-list" class="check-list"></ul>
+            </details>
+
+            <details id="result-tools">
+              <summary>Herramientas ejecutadas</summary>
+              <ul id="tools-used-list" class="check-list"></ul>
+            </details>
+
+            <details open id="result-cow">
+              <summary>Chain-of-Work (trazabilidad)</summary>
+              <ol id="cow-list" class="cow-list"></ol>
+            </details>
+          </div>
+          <div id="result-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Ejecutando agente con Ollama... (puede tardar según el modelo)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= EJECUCIONES ================= -->
+    <section class="panel" id="panel-executions">
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Ejecuciones anteriores</h2>
+          <button id="btn-refresh-executions" class="btn secondary small">Actualizar</button>
+        </div>
+        <table class="data-table" id="executions-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Agente</th><th>Intención</th><th>Modelo</th>
+              <th>Estado</th><th>Confianza</th><th>Fecha</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="execution-detail" class="hidden">
+          <h3 id="execution-detail-title"></h3>
+          <div class="result-output markdown" id="execution-detail-output"></div>
+          <details open>
+            <summary>Chain-of-Work</summary>
+            <ol id="execution-detail-cow" class="cow-list"></ol>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DOCUMENTOS ================= -->
+    <section class="panel" id="panel-documents">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Subir documento</h2>
+          <p class="hint">Formatos: TXT, MD, PDF. Se trocea e indexa en SQLite para búsqueda y RAG.</p>
+          <input type="file" id="file-input" accept=".txt,.md,.pdf" />
+          <button id="btn-upload" class="btn primary">Subir e indexar</button>
+          <p id="upload-status" class="hint"></p>
+
+          <h2 class="spaced">Buscar en documentos</h2>
+          <div class="inline-form">
+            <input type="text" id="search-input" placeholder="palabras clave..." />
+            <button id="btn-search" class="btn secondary">Buscar</button>
+          </div>
+          <ul id="search-results" class="search-results"></ul>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <h2>Documentos subidos</h2>
+            <button id="btn-refresh-documents" class="btn secondary small">Actualizar</button>
+          </div>
+          <ul id="documents-list" class="documents-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HERRAMIENTAS ================= -->
+    <section class="panel" id="panel-tools">
+      <div class="card">
+        <h2>Catálogo de herramientas</h2>
+        <p class="hint">
+          Herramientas deterministas y locales: sin acceso a Internet, sin comandos del
+          sistema, con entradas validadas, timeout y registro de auditoría.
+        </p>
+        <div id="tools-list" class="tools-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OCS Agentic Enterprise Platform — 100% local: FastAPI + SQLite + Ollama.
+    Las respuestas de IA son orientativas y deben revisarse.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
