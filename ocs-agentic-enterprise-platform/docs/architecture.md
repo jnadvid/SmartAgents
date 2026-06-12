@@ -42,8 +42,9 @@ models.py       8 tablas SQLite (SQLAlchemy 2.0)
    pasos del Chain-of-Work.
 5. **ModelRouter** resuelve el modelo (usuario > agente > .env) y verifica que esté
    descargado (`/api/tags`, con caché de 15 s).
-6. **RAG opcional**: recuperación por keywords sobre los chunks en SQLite; las citas
-   (archivo + chunk + score) van al prompt y al Chain-of-Work.
+6. **RAG opcional (híbrido)**: recuperación por palabras clave + semántica (embeddings de
+   Ollama + similitud coseno) sobre los chunks en SQLite; las citas (archivo + chunk +
+   score + método) van al prompt y al Chain-of-Work. Si Ollama no está disponible, cae a keyword.
 7. **AgentPlanner** construye el plan auditable (objetivo, pasos, herramientas previstas,
    evidencias esperadas, formato de salida).
 8. El **agente** ejecuta sus herramientas autorizadas (cada una validada, con timeout y
@@ -76,6 +77,6 @@ models.py       8 tablas SQLite (SQLAlchemy 2.0)
   puras y cortas, así que el impacto es marginal y está documentado.
 - La clasificación por reglas puede errar en tareas ambiguas; por eso existe el fallback
   LLM, la vista previa de enrutado y el modo manual.
-- El RAG por keywords no encuentra sinónimos; el contrato de `embed()` ya está implementado
-  para un índice vectorial futuro.
+- El RAG semántico calcula la similitud coseno en Python (suficiente a escala local); para
+  grandes volúmenes convendrá un índice vectorial dedicado (roadmap).
 - SQLite es mono-escritor: suficiente para uso local mono-usuario, no para concurrencia alta.

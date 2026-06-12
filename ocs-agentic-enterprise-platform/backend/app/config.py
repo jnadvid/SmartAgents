@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     rag_chunk_size: int = 1200
     rag_chunk_overlap: int = 150
     rag_top_k: int = 5
+    # RAG semántico (Fase 2): embeddings con Ollama + similitud coseno
+    rag_use_embeddings: bool = True
+    rag_vector_weight: float = 0.65  # peso del coseno en la búsqueda híbrida (0-1)
 
     # Logging
     log_level: str = "INFO"

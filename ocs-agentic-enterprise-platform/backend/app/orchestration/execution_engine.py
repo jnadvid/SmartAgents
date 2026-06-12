@@ -25,7 +25,7 @@ from app.orchestration.agent_planner import AgentPlanner
 from app.orchestration.confidence_scorer import ConfidenceReport, ConfidenceScorer
 from app.orchestration.response_verifier import ResponseVerifier, VerificationReport
 from app.orchestration.task_router import RouteDecision, TaskRouter
-from app.rag.retriever import build_context_block, search_chunks
+from app.rag.retriever import build_context_block, retrieve_relevant
 from app.security.policies import ensure_input_size, get_policy
 from app.security.sanitization import clean_text, redact_secrets, summarize_for_log, truncate
 from app.tools.base import ToolContext, ToolResult
@@ -202,15 +202,28 @@ class ExecutionEngine:
         documents_block = ""
         documents_used = 0
         if use_documents:
-            hits = search_chunks(self.db, task, self.settings.rag_top_k)
+            hits = retrieve_relevant(
+                self.db,
+                task,
+                self.settings.rag_top_k,
+                provider=self.llm,
+                embed_model=self.settings.ollama_embed_model,
+                use_embeddings=self.settings.rag_use_embeddings,
+            )
             documents_block = build_context_block(hits)
             documents_used = len(hits)
+            method = hits[0].method if hits else "keyword"
             recorder.record(
                 "document_retrieval",
-                f"Recuperación documental: {documents_used} fragmento(s)",
-                description="Búsqueda por palabras clave en los documentos locales subidos.",
+                f"Recuperación documental ({method}): {documents_used} fragmento(s)",
+                description=f"Búsqueda {method} en los documentos locales subidos.",
                 evidence=[
-                    {"filename": h.filename, "chunk": h.chunk_index, "score": round(h.score, 2)}
+                    {
+                        "filename": h.filename,
+                        "chunk": h.chunk_index,
+                        "score": round(h.score, 3),
+                        "method": h.method,
+                    }
                     for h in hits
                 ],
                 risk_level="info",

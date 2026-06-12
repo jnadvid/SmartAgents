@@ -220,6 +220,9 @@ class DocumentUploadResponse(BaseModel):
 class DocumentSearchRequest(BaseModel):
     query: str = Field(min_length=2)
     top_k: int = Field(default=5, ge=1, le=20)
+    mode: Literal["keyword", "semantic", "hybrid"] = Field(
+        default="hybrid", description="keyword (sin LLM), semantic (embeddings) o hybrid"
+    )
 
 
 class DocumentSearchHit(BaseModel):
@@ -228,11 +231,54 @@ class DocumentSearchHit(BaseModel):
     chunk_index: int
     score: float
     snippet: str
+    method: str = "keyword"
 
 
 class DocumentSearchResponse(BaseModel):
     query: str
+    mode: str
     hits: list[DocumentSearchHit]
+
+
+class EmbeddingIndexResponse(BaseModel):
+    documents: int
+    indexed_chunks: int
+    model: str
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# Métricas (dashboard)
+# ---------------------------------------------------------------------------
+
+
+class ToolUsageItem(BaseModel):
+    tool_name: str
+    count: int
+    errors: int
+
+
+class TimelinePoint(BaseModel):
+    date: str
+    count: int
+
+
+class MetricsSummary(BaseModel):
+    total_executions: int
+    completed: int
+    warnings: int
+    failed: int
+    success_rate: float
+    avg_confidence: float | None = None
+    by_agent: dict[str, int]
+    by_intent: dict[str, int]
+    by_status: dict[str, int]
+    tool_usage: list[ToolUsageItem]
+    timeline: list[TimelinePoint]
+    documents: int
+    chunks: int
+    embeddings: int
+    embedding_model: str
 
 
 # ---------------------------------------------------------------------------

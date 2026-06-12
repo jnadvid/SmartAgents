@@ -1,15 +1,25 @@
 # Roadmap
 
-Estado actual: **MVP funcional** (16 agentes, 19 herramientas, orquestación completa,
-Chain-of-Work, RAG por keywords, frontend, 82 tests).
+Estado actual: **Fase 2** (16 agentes, 19 herramientas, orquestación completa,
+Chain-of-Work, RAG híbrido con embeddings, dashboard de métricas, exportación de
+informes, gestor `.bat` para Windows, 88 tests).
+
+## Completado en la Fase 2
+
+- [x] **RAG semántico**: embeddings de Ollama (`nomic-embed-text`) en SQLite
+      (tabla `chunk_embeddings`) y búsqueda híbrida keyword + coseno, con degradación
+      elegante a keyword si Ollama no está disponible.
+- [x] **Exportación** de ejecuciones a Markdown y HTML (informe autocontenido).
+- [x] **Dashboard de métricas**: KPIs, gráficos y línea de actividad.
+- [x] **Frontend rediseñado** (navegación lateral, anillo de confianza, timeline CoW).
+- [x] **Gestor todo-en-uno `OCS-Platform.bat`** para Windows.
 
 ## Corto plazo
 
-- [ ] **RAG vectorial**: índice con embeddings de Ollama (`nomic-embed-text`) y ChromaDB
-      local opcional. El contrato `BaseLLMProvider.embed()` ya está implementado y la
-      columna `document_chunks.embedding_model` reservada.
+- [ ] **Índice vectorial dedicado** (ChromaDB local opcional) para escalar el RAG semántico
+      más allá del cálculo de coseno en Python.
 - [ ] **Streaming de tokens** (SSE) para ver la respuesta del agente en tiempo real.
-- [ ] **Exportación** de ejecuciones e informes a Markdown/PDF descargable.
+- [ ] **Exportación a PDF** (además de Markdown/HTML).
 - [ ] **Cancelación** de ejecuciones en curso desde el frontend.
 - [ ] Edición de la tarea desde la vista previa de enrutado (re-clasificación en vivo).
 

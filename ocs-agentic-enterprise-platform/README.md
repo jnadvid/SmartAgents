@@ -7,6 +7,19 @@ solo **Python 3.11+, FastAPI, SQLite y Ollama**.
 > Las respuestas de los agentes son orientativas. Los agentes legal, financiero y de
 > compliance **no sustituyen asesoría profesional** y lo declaran en cada respuesta.
 
+## Novedades de la Fase 2
+
+- 📊 **Dashboard visual** con KPIs, gráficos (por agente, intención, herramientas, estado)
+  y línea de actividad de los últimos 14 días.
+- 🧠 **RAG semántico**: embeddings locales con Ollama (`nomic-embed-text`) guardados en
+  SQLite y **búsqueda híbrida** (palabras clave + similitud coseno), con degradación
+  elegante a keyword si Ollama no está disponible.
+- ⬇️ **Exportación** de cualquier ejecución a **Markdown o HTML** (informe autocontenido).
+- 🎛️ **Interfaz rediseñada** con navegación lateral, anillo de confianza y Chain-of-Work
+  como línea de tiempo.
+- 🪟 **`OCS-Platform.bat`**: script todo-en-uno para Windows que instala, prepara Ollama,
+  arranca, detiene y gestiona la plataforma desde un menú.
+
 ---
 
 ## ¿Qué es?
@@ -125,6 +138,27 @@ Guía completa en [`docs/ollama_setup.md`](docs/ollama_setup.md).
 
 ## Ejecución
 
+### Opción A — Windows, script todo-en-uno (recomendada)
+
+Haz doble clic en **`OCS-Platform.bat`** (o ejecútalo desde la consola). Aparece un menú:
+
+```
+[1] Instalacion completa (venv + dependencias + .env + BD)
+[2] Preparar Ollama (arrancar servidor + descargar modelo)
+[3] INICIAR plataforma (backend + navegador)
+[4] Detener plataforma
+[5] Estado del sistema
+[6] Ejecutar tests
+[7] Reindexar embeddings (RAG semantico)
+[8] Abrir navegador
+[9] Inicio rapido (instalar + Ollama + iniciar)
+```
+
+La opción **[9] Inicio rápido** hace todo de una vez. Para el día a día: **[3]** para
+arrancar y **[4]** para detener.
+
+### Opción B — manual (Windows / Linux / macOS)
+
 ```bash
 # 1. Inicializar (o migrar) la base de datos SQLite
 python backend/app/database.py
@@ -177,7 +211,10 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | POST | `/agents/execute` | Ejecutar (auto o manual vía `agent_name`) |
 | POST | `/agents/{agent}/execute` | Ejecutar con agente concreto |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
-| POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local |
+| GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
+| POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local (keyword/semantic/hybrid) |
+| POST | `/documents/reindex-embeddings` | Regenerar embeddings (RAG semántico) |
+| GET | `/metrics/summary` | Datos agregados del dashboard |
 | GET | `/tools`, `/tools/categories` | Catálogo de herramientas |
 
 ## Cómo añadir un nuevo agente
@@ -203,7 +240,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 82 tests: provider mockeado, clasificador, router, tools, motor y CoW
+pytest          # 88 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, embeddings/RAG semántico, métricas y exportación
 ```
 
 ## Seguridad
@@ -217,8 +255,9 @@ pytest          # 82 tests: provider mockeado, clasificador, router, tools, moto
 ## Limitaciones (MVP)
 
 - **Sin navegación web**: la investigación de mercado trabaja solo con datos aportados (y lo declara).
-- **RAG por palabras clave** (no semántico). Embeddings de Ollama ya implementados en el
-  proveedor, índice vectorial (ChromaDB) en el roadmap.
+- **RAG semántico (Fase 2)** con embeddings de Ollama y búsqueda híbrida sobre SQLite.
+  La similitud coseno se calcula en Python (escala local); un índice vectorial dedicado
+  (ej. ChromaDB) queda en el roadmap. Si Ollama está caído, cae a búsqueda por palabras clave.
 - **Confianza heurística**, no calibrada estadísticamente.
 - **PDF**: solo texto extraíble (sin OCR de escaneados).
 - **Mono-usuario local**; multiusuario con roles en el roadmap.
@@ -243,14 +282,15 @@ ocs-agentic-enterprise-platform/
       llm/            # contrato LLM + OllamaProvider + ModelRouter
       tools/          # BaseTool + 19 herramientas + registro
       audit/          # Chain-of-Work
-      rag/            # loader, chunker, retriever
-      api/            # routers FastAPI
+      rag/            # loader, chunker, retriever, embeddings (RAG semántico)
+      api/            # routers FastAPI (incluye métricas y exportación)
       security/       # auth, políticas, sanitización
-      services/       # fachadas de aplicación
+      services/       # fachadas: agent_runner, documentos, ejecuciones, métricas, exportación
     data/             # SQLite + documentos subidos (no versionado)
-    tests/            # 82 tests
-  frontend/           # index.html + app.js + style.css (vanilla)
+    tests/            # 88 tests
+  frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica
+  OCS-Platform.bat    # gestor todo-en-uno para Windows
   run_backend.py      # punto de entrada local
   .env.example        # configuración de ejemplo
 ```

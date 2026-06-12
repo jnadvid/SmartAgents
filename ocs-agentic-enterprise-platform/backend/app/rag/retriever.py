@@ -32,6 +32,7 @@ class ChunkHit:
     score: float
     snippet: str
     content: str
+    method: str = "keyword"
 
 
 def search_chunks(db: Session, query: str, top_k: int = 5) -> list[ChunkHit]:
@@ -77,6 +78,81 @@ def search_chunks(db: Session, query: str, top_k: int = 5) -> list[ChunkHit]:
         extra={"extra_data": {"query_tokens": tokens, "hits": len(hits)}},
     )
     return hits[:top_k]
+
+
+def retrieve_relevant(
+    db: Session,
+    query: str,
+    top_k: int = 5,
+    provider=None,
+    embed_model: str | None = None,
+    use_embeddings: bool = False,
+) -> list[ChunkHit]:
+    """Recuperación híbrida (Fase 2): keyword + semántica (si está disponible).
+
+    Degradación elegante: si los embeddings están desactivados, no hay índice
+    o el proveedor falla, devuelve la búsqueda por palabras clave.
+    """
+    keyword_hits = search_chunks(db, query, top_k)
+
+    if not use_embeddings or provider is None or not embed_model:
+        return keyword_hits
+
+    # Import local: el módulo de embeddings es opcional para el resto del sistema.
+    from app.llm.base import LLMProviderError
+    from app.rag import embeddings as emb
+
+    if not emb.has_embeddings(db, embed_model):
+        return keyword_hits
+    try:
+        vector_hits = emb.semantic_search(db, provider, query, top_k, embed_model)
+    except LLMProviderError as exc:
+        logger.warning("Búsqueda semántica no disponible, se usa keyword: %s", exc)
+        return keyword_hits
+
+    if not vector_hits:
+        return keyword_hits
+    return _merge_hits(keyword_hits, vector_hits, top_k)
+
+
+def _merge_hits(
+    keyword_hits: list[ChunkHit], vector_hits: list[ChunkHit], top_k: int
+) -> list[ChunkHit]:
+    """Combina resultados keyword y semánticos en una puntuación 0-1 ponderada."""
+    from app.config import get_settings
+
+    weight = get_settings().rag_vector_weight
+    max_keyword = max((h.score for h in keyword_hits), default=0.0) or 1.0
+
+    combined: dict[tuple[int, int], dict] = {}
+    for hit in keyword_hits:
+        key = (hit.document_id, hit.chunk_index)
+        combined[key] = {"hit": hit, "kw": hit.score / max_keyword, "vec": 0.0}
+    for hit in vector_hits:
+        key = (hit.document_id, hit.chunk_index)
+        entry = combined.setdefault(key, {"hit": hit, "kw": 0.0, "vec": 0.0})
+        entry["vec"] = hit.score
+        # Preferimos el snippet semántico (más centrado en el significado).
+        entry["hit"] = hit
+
+    results: list[ChunkHit] = []
+    for entry in combined.values():
+        score = weight * entry["vec"] + (1.0 - weight) * entry["kw"]
+        base = entry["hit"]
+        method = "hybrid" if entry["kw"] > 0 and entry["vec"] > 0 else base.method
+        results.append(
+            ChunkHit(
+                document_id=base.document_id,
+                filename=base.filename,
+                chunk_index=base.chunk_index,
+                score=round(score, 4),
+                snippet=base.snippet,
+                content=base.content,
+                method=method,
+            )
+        )
+    results.sort(key=lambda h: -h.score)
+    return results[:top_k]
 
 
 def build_context_block(hits: list[ChunkHit], max_chars: int = 6000) -> str:

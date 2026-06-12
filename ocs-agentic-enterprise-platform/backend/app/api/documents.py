@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.rag.document_loader import DocumentProcessingError
+from app.llm.base import LLMProviderError
 from app.schemas import (
     DocumentDetail,
     DocumentOut,
@@ -16,9 +17,11 @@ from app.schemas import (
     DocumentSearchRequest,
     DocumentSearchResponse,
     DocumentUploadResponse,
+    EmbeddingIndexResponse,
 )
 from app.security.auth import api_key_auth
 from app.services import document_service
+from app.services.agent_runner import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +42,11 @@ async def upload_document(
         )
     try:
         document, chunk_count = document_service.save_uploaded_document(
-            db, file.filename or "documento.txt", raw
+            db,
+            file.filename or "documento.txt",
+            raw,
+            provider=get_llm_provider() if settings.rag_use_embeddings else None,
+            embed_model=settings.ollama_embed_model if settings.rag_use_embeddings else None,
         )
     except document_service.DuplicateDocumentError as exc:
         raise HTTPException(
@@ -81,9 +88,19 @@ def get_document(document_id: int, db: Session = Depends(get_db)) -> DocumentDet
 def search_documents(
     request: DocumentSearchRequest, db: Session = Depends(get_db)
 ) -> DocumentSearchResponse:
-    hits = document_service.search_documents(db, request.query, request.top_k)
+    settings = get_settings()
+    use_provider = request.mode in ("semantic", "hybrid") and settings.rag_use_embeddings
+    hits = document_service.search_documents(
+        db,
+        request.query,
+        request.top_k,
+        mode=request.mode,
+        provider=get_llm_provider() if use_provider else None,
+        embed_model=settings.ollama_embed_model if use_provider else None,
+    )
     return DocumentSearchResponse(
         query=request.query,
+        mode=request.mode,
         hits=[
             DocumentSearchHit(
                 document_id=hit.document_id,
@@ -91,7 +108,26 @@ def search_documents(
                 chunk_index=hit.chunk_index,
                 score=round(hit.score, 3),
                 snippet=hit.snippet,
+                method=hit.method,
             )
             for hit in hits
         ],
+    )
+
+
+@router.post("/reindex-embeddings", response_model=EmbeddingIndexResponse)
+def reindex_embeddings(db: Session = Depends(get_db)) -> EmbeddingIndexResponse:
+    """Regenera los embeddings de todos los documentos (RAG semántico)."""
+    settings = get_settings()
+    try:
+        result = document_service.reindex_embeddings(
+            db, get_llm_provider(), settings.ollama_embed_model
+        )
+    except LLMProviderError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return EmbeddingIndexResponse(
+        documents=int(result["documents"]),
+        indexed_chunks=int(result["indexed_chunks"]),
+        model=str(result["model"]),
+        message=f"Reindexados {result['indexed_chunks']} chunk(s) de {result['documents']} documento(s).",
     )

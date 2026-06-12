@@ -143,6 +143,26 @@ class DocumentChunk(Base):
     document: Mapped[Document] = relationship(back_populates="chunks")
 
 
+class ChunkEmbedding(Base):
+    """Embedding vectorial de un chunk (RAG semántico, Fase 2).
+
+    Tabla separada para no alterar el esquema existente: `create_all` la añade
+    sin necesidad de migración. Un embedding por chunk (se reemplaza al
+    reindexar con otro modelo).
+    """
+
+    __tablename__ = "chunk_embeddings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chunk_id: Mapped[int] = mapped_column(
+        ForeignKey("document_chunks.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    model: Mapped[str] = mapped_column(String(100), index=True)
+    dim: Mapped[int] = mapped_column(Integer, default=0)
+    vector: Mapped[str] = mapped_column(Text)  # JSON: lista de floats
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class TaskRoute(Base):
     __tablename__ = "task_routes"
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,7 +13,7 @@ from app.schemas import (
     ExecutionSummary,
 )
 from app.security.auth import api_key_auth
-from app.services import execution_service
+from app.services import execution_service, export_service
 
 router = APIRouter(prefix="/executions", tags=["executions"], dependencies=[Depends(api_key_auth)])
 
@@ -48,4 +49,29 @@ def get_chain_of_work(execution_id: int, db: Session = Depends(get_db)) -> Chain
     return ChainOfWorkResponse(
         execution_id=execution_id,
         steps=[ChainOfWorkStepOut.model_validate(step) for step in steps],
+    )
+
+
+@router.get("/{execution_id}/export", response_class=PlainTextResponse)
+def export_execution(
+    execution_id: int,
+    format: str = Query(default="markdown", pattern="^(markdown|html)$"),
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    """Exporta una ejecución completa como informe Markdown o HTML descargable."""
+    execution = execution_service.get_execution(db, execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail=f"Ejecución {execution_id} no encontrada.")
+    if format == "html":
+        content = export_service.build_html(db, execution)
+        media_type, ext = "text/html", "html"
+    else:
+        content = export_service.build_markdown(db, execution)
+        media_type, ext = "text/markdown", "md"
+    return PlainTextResponse(
+        content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="ejecucion_{execution_id}.{ext}"'
+        },
     )
