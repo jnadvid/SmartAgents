@@ -38,26 +38,35 @@ def test_validate_rejects_non_editable_and_bad_values() -> None:
     assert runtime_config.validate({"enable_pentest_tools": "no"})["enable_pentest_tools"] is False
 
 
-def test_wsl_command_is_prefixed(monkeypatch) -> None:
+def test_wsl_command_is_piped_via_stdin(monkeypatch) -> None:
     monkeypatch.setattr(runners, "is_available", lambda ctx, binary: True)
-    argv = runners.build_argv(RunContext(mode="wsl", wsl_distro="kali-linux"), "nmap", ["-sV", "host"])
-    # wsl -d kali-linux -- sh -c '<PATH>; exec "$@"' ocs nmap -sV host
-    assert argv[:6] == ["wsl", "-d", "kali-linux", "--", "sh", "-c"]
-    assert "export PATH=" in argv[6] and 'exec "$@"' in argv[6]
-    assert argv[-4:] == ["ocs", "nmap", "-sV", "host"]  # binario y args como posicionales
+    # En WSL el comando va por STDIN a `sh -s` (no como argumentos de wsl.exe).
+    argv, stdin = runners.build_invocation(RunContext(mode="wsl", wsl_distro="kali-linux"), "nmap", ["-sV", "host"])
+    assert argv == ["wsl", "-d", "kali-linux", "--", "sh", "-s"]
+    assert b"export PATH=" in stdin and b"nmap -sV host" in stdin
 
 
 def test_native_command_resolves_path() -> None:
-    argv = runners.build_argv(RunContext(mode="native"), "true", ["x"])  # 'true' existe en Linux
-    assert argv is not None and argv[0].endswith("true") and argv[-1] == "x"
-    # Binario inexistente -> None
-    assert runners.build_argv(RunContext(mode="native"), "binario_que_no_existe_xyz", []) is None
+    argv, stdin = runners.build_invocation(RunContext(mode="native"), "true", ["x"])  # 'true' existe en Linux
+    assert argv is not None and argv[0].endswith("true") and argv[-1] == "x" and stdin is None
+    # Binario inexistente -> (None, None)
+    assert runners.build_invocation(RunContext(mode="native"), "binario_que_no_existe_xyz", []) == (None, None)
 
 
 def test_wsl_command_includes_user(monkeypatch) -> None:
     monkeypatch.setattr(runners, "is_available", lambda ctx, binary: True)
-    argv = runners.build_argv(RunContext(mode="wsl", wsl_distro="kali-linux", wsl_user="kali"), "nmap", ["host"])
-    assert argv[:5] == ["wsl", "-d", "kali-linux", "-u", "kali"]
+    argv, _ = runners.build_invocation(RunContext(mode="wsl", wsl_distro="kali-linux", wsl_user="kali"), "nmap", ["host"])
+    assert argv[:5] == ["wsl", "-d", "kali-linux", "-u", "kali"] and argv[-2:] == ["sh", "-s"]
+
+
+def test_wsl_root_password_goes_through_pipe_not_argv(monkeypatch) -> None:
+    monkeypatch.setattr(runners, "is_available", lambda ctx, binary: True)
+    ctx = RunContext(mode="wsl", wsl_distro="kali-linux")
+    argv, stdin = runners.build_invocation(ctx, "nmap", ["-sS", "host"], needs_root=True, sudo_password="s3cr3t")
+    assert argv == ["wsl", "-d", "kali-linux", "--", "sh", "-s"]
+    # La contraseña va en el script (por stdin), nunca en los argumentos de wsl.exe.
+    assert b"s3cr3t" not in b" ".join(a.encode() for a in argv)
+    assert b"sudo -S" in stdin and b"s3cr3t" in stdin
 
 
 def test_check_many_and_probe_native() -> None:
