@@ -995,6 +995,10 @@ async function loadSettings() {
     el("set-pentest").checked = s.enable_pentest_tools;
     el("set-scope").value = s.pentest_scope_allowlist || "";
     el("set-mode").value = s.pentest_execution_mode;
+    const distros = s.wsl_distros || [];
+    if (s.pentest_wsl_distro && !distros.includes(s.pentest_wsl_distro)) distros.push(s.pentest_wsl_distro);
+    el("set-distro").innerHTML = '<option value="">(distro por defecto)</option>' +
+      distros.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
     el("set-distro").value = s.pentest_wsl_distro || "";
     el("set-wsl-user").value = s.pentest_wsl_user || "";
     el("set-wsl-pass").placeholder = s.pentest_wsl_password_set ? "(configurada · sin cambios)" : "(sin definir)";

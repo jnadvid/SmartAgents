@@ -49,9 +49,19 @@ def _build_out() -> SettingsOut:
         report_footer=str(pub["report_footer"]),
         host_os=platform.system() or "unknown",
         wsl_available=shutil.which("wsl") is not None,
+        wsl_distros=_wsl_distros(),
         email_configured=email_service.is_configured(),
         available_models=_available_models(),
     )
+
+
+def _wsl_distros() -> list[str]:
+    from app.pentest import runners
+
+    try:
+        return runners.list_wsl_distros()
+    except Exception:  # noqa: BLE001
+        return []
 
 
 @router.get("", response_model=SettingsOut)

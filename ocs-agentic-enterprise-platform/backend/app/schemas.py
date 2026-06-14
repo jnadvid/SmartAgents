@@ -477,6 +477,7 @@ class SettingsOut(BaseModel):
     report_footer: str = ""
     host_os: str
     wsl_available: bool
+    wsl_distros: list[str] = []
     email_configured: bool = False
     available_models: list[str] = []
 
