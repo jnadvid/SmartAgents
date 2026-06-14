@@ -24,6 +24,7 @@ from app.api import (
     models,
     pentest,
     scheduler,
+    settings as settings_api,
     tools,
 )
 from app.config import get_settings, setup_logging
@@ -43,8 +44,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.agents.registry import sync_agents_to_db
     from app.services.agent_runner import get_agent_registry, get_llm_provider
 
+    from app import runtime_config
+
     with SessionLocal() as db:
         sync_agents_to_db(db, get_agent_registry())
+        runtime_config.load(db)
 
     ollama = get_llm_provider().healthcheck()
     logger.info(
@@ -113,6 +117,7 @@ def create_app() -> FastAPI:
     app.include_router(scheduler.router)
     app.include_router(connectors.router)
     app.include_router(pentest.router)
+    app.include_router(settings_api.router)
 
     # Frontend estático servido en la raíz (después de las rutas de la API).
     frontend_dir = settings.frontend_dir

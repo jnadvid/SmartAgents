@@ -26,6 +26,20 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class AppSetting(Base):
+    """Ajuste editable en runtime (clave/valor JSON). Sobrescribe el valor del .env.
+
+    Tabla nueva: `create_all` la añade sin migración. Solo se persisten aquí las
+    claves de la allow-list de `runtime_config` (modelo por defecto, pentest, etc.).
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")  # JSON
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class Agent(Base):
     """Espejo persistente del registro de agentes (para auditoría y gestión)."""
 

@@ -19,6 +19,7 @@ const ICONS = {
   agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 14c2.5 0 5 1.6 5 4.5"/></svg>',
   scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
   pentest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.06-.33.1-.66.1-1z"/></svg>',
 };
 
 const VIEWS = [
@@ -30,6 +31,7 @@ const VIEWS = [
   { id: "pentest", label: "Pentest", sub: "Escaneo autorizado con Kali" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
   { id: "tools", label: "Herramientas", sub: "Catálogo de herramientas locales" },
+  { id: "settings", label: "Ajustes", sub: "Modelo, pentest y entorno de ejecución" },
 ];
 
 // --------------------------------------------------------------------------
@@ -145,6 +147,7 @@ function switchView(id) {
   if (id === "executions") loadExecutions();
   if (id === "scheduler") loadScheduler();
   if (id === "pentest") loadPentest();
+  if (id === "settings") loadSettings();
   if (id === "documents") loadDocuments();
 }
 
@@ -805,6 +808,55 @@ function renderPentest(r) {
 }
 
 // --------------------------------------------------------------------------
+// Ajustes
+// --------------------------------------------------------------------------
+let SETTINGS_INFO = { host_os: "", wsl_available: false };
+
+async function loadSettings() {
+  try {
+    const s = await api("/settings");
+    SETTINGS_INFO = { host_os: s.host_os, wsl_available: s.wsl_available };
+    const models = s.available_models && s.available_models.length ? s.available_models : [s.default_ollama_model];
+    const opts = [...new Set([s.default_ollama_model, ...models])].filter(Boolean);
+    el("set-model").innerHTML = opts.map((m) =>
+      `<option value="${escapeHtml(m)}"${m === s.default_ollama_model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+    el("set-pentest").checked = s.enable_pentest_tools;
+    el("set-scope").value = s.pentest_scope_allowlist || "";
+    el("set-mode").value = s.pentest_execution_mode;
+    el("set-distro").value = s.pentest_wsl_distro || "kali-linux";
+    el("settings-host").innerHTML = `<span class="status-dot ${s.wsl_available ? "up" : "down"}"></span> Sistema: <strong>${escapeHtml(s.host_os)}</strong> · WSL ${s.wsl_available ? "detectado" : "no detectado"} · ${s.available_models.length} modelo(s) Ollama`;
+    applyWslHint();
+  } catch (e) { el("settings-msg").textContent = e.message; }
+}
+
+function applyWslHint() {
+  const mode = el("set-mode").value;
+  const hint = el("set-wsl-hint");
+  if (mode !== "wsl") { hint.textContent = ""; return; }
+  if (SETTINGS_INFO.wsl_available) hint.textContent = "WSL detectado en el host. Las herramientas se ejecutarán dentro de la distro indicada.";
+  else if (SETTINGS_INFO.host_os === "Windows") hint.innerHTML = "WSL no detectado: instala Kali con <code>scripts/install-kali-windows.ps1</code>.";
+  else hint.textContent = "Aviso: el host no es Windows y no se detecta 'wsl'. El modo WSL solo aplica en Windows.";
+}
+
+async function saveSettings() {
+  const body = {
+    default_ollama_model: el("set-model").value,
+    enable_pentest_tools: el("set-pentest").checked,
+    pentest_scope_allowlist: el("set-scope").value.trim(),
+    pentest_execution_mode: el("set-mode").value,
+    pentest_wsl_distro: el("set-distro").value.trim() || "kali-linux",
+  };
+  el("btn-save-settings").disabled = true;
+  try {
+    await api("/settings", { method: "PUT", body: JSON.stringify(body) });
+    el("settings-msg").textContent = "✓ Ajustes guardados.";
+    toast("Ajustes guardados.", "ok");
+    loadModels();
+  } catch (e) { el("settings-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-save-settings").disabled = false; }
+}
+
+// --------------------------------------------------------------------------
 // Init
 // --------------------------------------------------------------------------
 function setupSeg(segId, onChange) {
@@ -836,6 +888,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Pentest
   el("btn-pentest-run").addEventListener("click", runPentest);
+
+  // Ajustes
+  el("btn-save-settings").addEventListener("click", saveSettings);
+  el("set-mode").addEventListener("change", applyWslHint);
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);

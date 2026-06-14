@@ -419,6 +419,46 @@
           <div id="tools-list" class="tools-cats"></div>
         </div>
       </section>
+
+      <!-- ===== AJUSTES ===== -->
+      <section class="view" id="view-settings">
+        <div id="settings-host" class="sched-banner"></div>
+        <div class="split">
+          <div class="card form-card">
+            <h3>Modelo de IA</h3>
+            <label class="lbl">Modelo Ollama por defecto</label>
+            <select id="set-model" class="input"></select>
+            <div class="agent-hint">Se usa cuando no eliges modelo en una tarea concreta.</div>
+          </div>
+
+          <div class="card form-card">
+            <h3>Pentesting (Kali)</h3>
+            <label class="check check-warn"><input type="checkbox" id="set-pentest" />
+              Activar herramientas de pentest (ejecutan binarios reales)</label>
+
+            <label class="lbl">Alcance autorizado <span class="lbl-dim">(dominios, IPs o CIDR, separados por comas)</span></label>
+            <textarea id="set-scope" class="input mono" rows="2" placeholder="mi-dominio.com, 10.0.0.0/24, 192.168.1.50"></textarea>
+
+            <div class="form-grid">
+              <div>
+                <label class="lbl">Entorno de ejecución</label>
+                <select id="set-mode" class="input">
+                  <option value="native">Nativo (Linux/Kali del host)</option>
+                  <option value="wsl">WSL (Windows + Kali)</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Distro WSL</label>
+                <input id="set-distro" class="input" value="kali-linux" />
+              </div>
+            </div>
+            <div id="set-wsl-hint" class="agent-hint"></div>
+
+            <div class="btn-row"><button id="btn-save-settings" class="btn primary">Guardar ajustes</button></div>
+            <div id="settings-msg" class="muted"></div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 

@@ -45,8 +45,11 @@ class ModelRouter:
         Lanza LLMModelNotFoundError con la lista de modelos instalados si el
         modelo elegido no está descargado.
         """
+        from app import runtime_config
+
         settings = get_settings()
-        candidate = requested_model or agent_default or settings.default_ollama_model
+        global_default = runtime_config.effective("default_ollama_model", settings.default_ollama_model)
+        candidate = requested_model or agent_default or global_default
 
         if not check_availability:
             return candidate

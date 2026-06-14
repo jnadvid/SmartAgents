@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     pentest_scope_allowlist: str = ""  # dominios/IPs/CIDR autorizados (coma-separados)
     pentest_timeout: int = 180  # timeout por herramienta (s)
     pentest_max_output_chars: int = 20000  # truncado de salida por herramienta
+    pentest_execution_mode: str = "native"  # native | wsl (Windows + Kali)
+    pentest_wsl_distro: str = "kali-linux"  # distribución WSL a usar en modo wsl
 
     # RAG
     rag_chunk_size: int = 1200

@@ -453,6 +453,30 @@ class ConnectorReadResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Ajustes editables (runtime)
+# ---------------------------------------------------------------------------
+
+
+class SettingsOut(BaseModel):
+    default_ollama_model: str
+    enable_pentest_tools: bool
+    pentest_scope_allowlist: str
+    pentest_execution_mode: str
+    pentest_wsl_distro: str
+    host_os: str
+    wsl_available: bool
+    available_models: list[str] = []
+
+
+class SettingsUpdate(BaseModel):
+    default_ollama_model: str | None = None
+    enable_pentest_tools: bool | None = None
+    pentest_scope_allowlist: str | None = None
+    pentest_execution_mode: Literal["native", "wsl"] | None = None
+    pentest_wsl_distro: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Pentesting (herramientas de Kali, autorizado)
 # ---------------------------------------------------------------------------
 
@@ -471,6 +495,8 @@ class PentestStatusResponse(BaseModel):
     enabled: bool
     scope_configured: bool
     scope_count: int
+    execution_mode: str = "native"
+    wsl_distro: str = "kali-linux"
     profiles: dict[str, list[str]]
     tools: list[PentestToolInfo]
 

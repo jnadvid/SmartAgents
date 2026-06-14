@@ -117,6 +117,16 @@ class DownLLMProvider(FakeLLMProvider):
         raise LLMConnectionError("No se puede conectar con Ollama (simulado).")
 
 
+@pytest.fixture(autouse=True)
+def _reset_runtime_config():
+    """Aísla el overlay de ajustes en runtime entre tests."""
+    from app import runtime_config
+
+    runtime_config.reset()
+    yield
+    runtime_config.reset()
+
+
 @pytest.fixture()
 def memory_session_factory():
     """Motor SQLite en memoria compartido entre hilos + tablas creadas."""
