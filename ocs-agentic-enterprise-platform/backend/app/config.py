@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     use_llm_intent_fallback: bool = True
     enable_auxiliary_agents: bool = False
 
+    # Programador de tareas (scheduler local)
+    enable_scheduler: bool = True
+    scheduler_poll_seconds: int = 30
+
     # RAG
     rag_chunk_size: int = 1200
     rag_chunk_overlap: int = 150

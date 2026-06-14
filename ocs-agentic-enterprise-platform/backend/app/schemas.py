@@ -308,6 +308,112 @@ class MetricsSummary(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Programador de tareas (scheduler)
+# ---------------------------------------------------------------------------
+
+TargetKind = Literal["auto", "agent", "squad", "team"]
+ScheduleKind = Literal["once", "interval", "daily", "weekly", "cron"]
+
+
+class ScheduledTaskCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    task: str = Field(min_length=1, description="Instrucción a ejecutar")
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool = False
+
+    target_kind: TargetKind = "auto"
+    target_ref: str | None = Field(default=None, description="Agente o squad según target_kind")
+    agent_names: list[str] | None = Field(default=None, description="Equipo ad-hoc (target_kind=team)")
+
+    schedule_kind: ScheduleKind
+    run_at: datetime | None = Field(default=None, description="Momento exacto (once), en UTC si no lleva zona")
+    interval_minutes: int | None = Field(default=None, ge=1, le=525600)
+    time_of_day: str | None = Field(default=None, description="HH:MM para daily/weekly")
+    day_of_week: int | None = Field(default=None, ge=0, le=6, description="0=lunes … 6=domingo (weekly)")
+    cron: str | None = Field(default=None, description="Expresión cron de 5 campos")
+    timezone: str = Field(default="UTC", max_length=64)
+
+
+class ScheduledTaskUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
+    task: str | None = None
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool | None = None
+    enabled: bool | None = None
+
+    target_kind: TargetKind | None = None
+    target_ref: str | None = None
+    agent_names: list[str] | None = None
+
+    schedule_kind: ScheduleKind | None = None
+    run_at: datetime | None = None
+    interval_minutes: int | None = Field(default=None, ge=1, le=525600)
+    time_of_day: str | None = None
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    cron: str | None = None
+    timezone: str | None = Field(default=None, max_length=64)
+
+
+class ScheduledRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    execution_id: int | None = None
+    status: str
+    message: str
+    started_at: datetime
+    finished_at: datetime | None = None
+
+
+class ScheduledTaskOut(BaseModel):
+    id: int
+    name: str
+    task: str
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool
+    target_kind: str
+    target_ref: str
+    agent_names: list[str]
+    schedule_kind: str
+    schedule_human: str
+    run_at: datetime | None = None
+    interval_minutes: int | None = None
+    time_of_day: str | None = None
+    day_of_week: int | None = None
+    cron: str | None = None
+    timezone: str
+    enabled: bool
+    status: str
+    next_run_at: datetime | None = None
+    last_run_at: datetime | None = None
+    last_status: str | None = None
+    last_execution_id: int | None = None
+    run_count: int
+    created_at: datetime
+
+
+class ScheduledTaskDetail(ScheduledTaskOut):
+    runs: list[ScheduledRunOut] = []
+
+
+class SchedulerStatusResponse(BaseModel):
+    enabled: bool
+    running: bool
+    poll_seconds: int
+    total_tasks: int
+    active_tasks: int
+    next_run_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# Herramientas
+# ---------------------------------------------------------------------------
+
+
 class ToolInfo(BaseModel):
     name: str
     category: str

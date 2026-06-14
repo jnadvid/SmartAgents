@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import agents, documents, executions, health, metrics, models, tools
+from app.api import agents, documents, executions, health, metrics, models, scheduler, tools
 from app.config import get_settings, setup_logging
 from app.database import SessionLocal, init_db
 
@@ -53,7 +53,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "Ejecuta `ollama serve` y descarga un modelo con `ollama pull %s`.",
             settings.default_ollama_model,
         )
+
+    # Programador de tareas en segundo plano (puntual y periódico).
+    scheduler_thread = None
+    if settings.enable_scheduler:
+        from app.scheduler.runner import get_scheduler
+
+        scheduler_thread = get_scheduler()
+        scheduler_thread.start()
+
     yield
+
+    if scheduler_thread is not None:
+        scheduler_thread.stop()
     logger.info("Plataforma detenida")
 
 
@@ -87,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(tools.router)
     app.include_router(metrics.router)
+    app.include_router(scheduler.router)
 
     # Frontend estático servido en la raíz (después de las rutas de la API).
     frontend_dir = settings.frontend_dir
