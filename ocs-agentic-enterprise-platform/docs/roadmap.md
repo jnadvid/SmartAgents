@@ -1,8 +1,18 @@
 # Roadmap
 
-Estado actual: **Fase 2** (16 agentes, 19 herramientas, orquestación completa,
-Chain-of-Work, RAG híbrido con embeddings, dashboard de métricas, exportación de
-informes, gestor `.bat` para Windows, 88 tests).
+Estado actual: **Fase 3** (36 agentes por áreas, 24 herramientas, equipos multi-agente,
+programador de tareas, orquestación completa, Chain-of-Work, RAG híbrido con embeddings,
+dashboard de métricas, exportación de informes, gestor `.bat` para Windows, 107 tests).
+
+## Completado en la Fase 3
+
+- [x] **36 agentes especializados** divididos por áreas (programación, ciberseguridad,
+      negocio, RRHH, psicología, compliance, proyectos…) y 5 herramientas de análisis
+      estático de código deterministas.
+- [x] **Equipos (squads) multi-agente** en cadena, predefinidos y ad-hoc, en una única
+      ejecución auditable (ver [`squads.md`](squads.md)).
+- [x] **Programador de tareas** local puntual/periódico (once/interval/daily/weekly/cron)
+      con zona horaria (ver [`scheduler.md`](scheduler.md)).
 
 ## Completado en la Fase 2
 

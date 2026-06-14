@@ -4,8 +4,24 @@ Plataforma **local** de agentes de IA multifuncionales, **auditables y extensibl
 tareas empresariales. Sin Docker, sin PostgreSQL, sin Redis y sin dependencias cloud:
 solo **Python 3.11+, FastAPI, SQLite y Ollama**.
 
-> Las respuestas de los agentes son orientativas. Los agentes legal, financiero y de
-> compliance **no sustituyen asesoría profesional** y lo declaran en cada respuesta.
+> Las respuestas de los agentes son orientativas. Los agentes legal, financiero, de
+> compliance, protección de datos y bienestar **no sustituyen asesoría profesional**
+> (jurídica, financiera o clínica) y lo declaran en cada respuesta.
+
+## Novedades de la Fase 3
+
+- 🧑‍💼 **36 agentes especializados divididos por áreas**: Programación (8), Ciberseguridad (6),
+  Negocio (3), RRHH (3), Psicología (3), Compliance (2), Proyectos (2), además de datos,
+  documentos, ventas, finanzas, legal, investigación, soporte e informes.
+- 💻 **Área de Programación** con herramientas deterministas de **análisis estático de código**
+  (estructura, calidad, SAST/CWE, esqueletos de test, TODOs) — los agentes *interactúan* con
+  el código que pegas **sin ejecutarlo nunca**.
+- 👥 **Equipos (squads) multi-agente**: varios agentes colaboran **en cadena** sobre una misma
+  tarea (p. ej. *arquitecto → backend → frontend → revisor → QA*). Equipos predefinidos o
+  ad-hoc, todo en **una única ejecución auditable**.
+- ⏰ **Programador de tareas**: lanza tareas a un agente, un equipo o en modo auto de forma
+  **puntual o periódica** (una vez, cada X minutos, diaria, semanal o **cron**), con zona
+  horaria. Hilo local en proceso, sin Celery ni cron del sistema.
 
 ## Novedades de la Fase 2
 
@@ -42,6 +58,20 @@ Una plataforma donde introduces una tarea en lenguaje natural y el sistema:
 - Revisión orientativa de contratos, análisis financiero básico.
 - Respuestas a clientes, planes de formación, informes ejecutivos.
 
+### Casos de uso de programación
+
+- Diseño de arquitectura (ADR, trade-offs), implementación backend/frontend.
+- Revisión de código (calidad, complejidad), generación de tests y documentación técnica.
+- Diseño de esquemas de BD y revisión de SQL; CI/CD e infraestructura como código.
+- Equipo de desarrollo completo en cadena (arquitecto → dev → revisor → QA).
+
+### Casos de uso de psicología y personas
+
+- Psicología organizacional (clima, motivación, gestión del cambio).
+- Psicología de UX (carga cognitiva, persuasión ética, accesibilidad cognitiva).
+- Bienestar laboral y prevención del burnout (orientación general, no clínica).
+- Selección de talento y People Ops (desempeño, políticas, retención).
+
 ### Casos de uso de ciberseguridad
 
 - Análisis de alertas Wazuh/SIEM con normalización y mapeo MITRE ATT&CK heurístico.
@@ -74,10 +104,14 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **16 agentes**: 11 empresariales + 5 especializados (ciberseguridad/compliance/seguridad de prompts).
-- **19 herramientas** deterministas: sin Internet, sin comandos del sistema, con validación
+- **36 agentes** especializados en 16 áreas (programación, ciberseguridad, negocio, RRHH,
+  psicología, compliance, proyectos, datos, documentos, ventas, finanzas, legal, etc.).
+- **8 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
+- **Programador de tareas** local (puntual/periódico) con hilo en segundo plano.
+- **24 herramientas** deterministas: sin Internet, sin comandos del sistema, con validación
   Pydantic, timeout y log de auditoría. Solo acceden a datos vía la BD local (`backend/data`).
-- Detalle completo en [`docs/architecture.md`](docs/architecture.md).
+- Detalle completo en [`docs/architecture.md`](docs/architecture.md),
+  [`docs/squads.md`](docs/squads.md) y [`docs/scheduler.md`](docs/scheduler.md).
 
 ## Requisitos
 
@@ -186,6 +220,30 @@ python run_backend.py
 Selecciona modo **Manual**, elige el agente del desplegable (se muestran su descripción y
 herramientas autorizadas) y ejecuta. La intención detectada se registra igualmente como metadato.
 
+### Modo equipo (multi-agente)
+
+En el Asistente, elige el modo **👥 Equipo**. Puedes:
+
+- **Equipo predefinido**: selecciona un *squad* (p. ej. *Equipo de Desarrollo*) y sus agentes
+  trabajan **en cadena**: cada uno recibe la tarea original más el resultado de los anteriores.
+- **Personalizado**: marca los agentes que quieras (2 o más, en orden) y compón tu propio equipo.
+
+El resultado combina el trabajo de todos los agentes en **una única ejecución auditable**, con
+pasos `squad_selection` y `agent_run` en el Chain-of-Work. También por API:
+`POST /agents/squads/execute` con `squad_name` o `agent_names`.
+
+### Programar tareas (puntuales o periódicas)
+
+En la pestaña **Programador** puedes lanzar una tarea a un agente, un equipo o en modo auto:
+
+- **Periodicidad**: una vez (fecha/hora), cada X minutos, diaria, semanal o **cron** (5 campos),
+  con **zona horaria** (p. ej. `Europe/Madrid`).
+- **Gestión**: pausar/reanudar, **ejecutar ahora**, ver el **histórico de ejecuciones** y borrar.
+
+Un hilo local comprueba las tareas vencidas cada `SCHEDULER_POLL_SECONDS` y las ejecuta,
+reprogramando la siguiente. Cada ejecución queda en el histórico normal (con su Chain-of-Work).
+Por API: `POST /scheduler/tasks`. Detalle en [`docs/scheduler.md`](docs/scheduler.md).
+
 ### Consultar el Chain-of-Work
 
 - En el resultado de cada ejecución: panel **Chain-of-Work** (línea temporal numerada).
@@ -207,9 +265,15 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET | `/health`, `/health/ollama` | Estado de la app y de Ollama |
 | GET | `/models` · POST `/models/test` | Modelos disponibles / prueba rápida |
 | GET | `/agents`, `/agents/categories` | Catálogo de agentes |
+| GET | `/agents/squads` | Catálogo de equipos (squads) |
 | POST | `/agents/route` | Clasificar intención (sin ejecutar) |
 | POST | `/agents/execute` | Ejecutar (auto o manual vía `agent_name`) |
 | POST | `/agents/{agent}/execute` | Ejecutar con agente concreto |
+| POST | `/agents/squads/execute` | Ejecutar un equipo (predefinido o ad-hoc) |
+| GET/POST | `/scheduler/tasks` | Listar / crear tareas programadas |
+| GET/PATCH/DELETE | `/scheduler/tasks/{id}` | Ver / editar / borrar una tarea programada |
+| POST | `/scheduler/tasks/{id}/{pause\|resume\|run-now}` | Pausar, reanudar o ejecutar ya |
+| GET | `/scheduler/status` | Estado del programador |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
 | POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local (keyword/semantic/hybrid) |
@@ -240,8 +304,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 88 tests: provider mockeado, clasificador, router, tools, motor,
-                # Chain-of-Work, embeddings/RAG semántico, métricas y exportación
+pytest          # 107 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, RAG semántico, métricas, exportación, squads y scheduler
 ```
 
 ## Seguridad
@@ -267,8 +331,9 @@ pytest          # 88 tests: provider mockeado, clasificador, router, tools, moto
 
 ## Roadmap
 
-Ver [`docs/roadmap.md`](docs/roadmap.md): RAG vectorial, streaming de tokens, multiusuario,
-exportación de informes, programación de tareas, y más.
+Ver [`docs/roadmap.md`](docs/roadmap.md): RAG vectorial dedicado (ChromaDB), streaming de
+tokens, multiusuario con roles, colas de ejecución y notificaciones de tareas programadas.
+Ya entregados en la Fase 3: agentes por áreas, equipos multi-agente y programación de tareas.
 
 ## Estructura del proyecto
 
@@ -277,17 +342,18 @@ ocs-agentic-enterprise-platform/
   backend/
     app/
       main.py · config.py · database.py · models.py · schemas.py
-      agents/         # BaseAgent + 16 agentes + registro
-      orchestration/  # clasificador, router, planner, motor, verificador, scorer
+      agents/         # BaseAgent + 36 agentes + squads + registro
+      orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
       llm/            # contrato LLM + OllamaProvider + ModelRouter
-      tools/          # BaseTool + 19 herramientas + registro
+      tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
+      scheduler/      # cálculo de fechas (cron/diaria/…) + hilo del programador
       audit/          # Chain-of-Work
       rag/            # loader, chunker, retriever, embeddings (RAG semántico)
-      api/            # routers FastAPI (incluye métricas y exportación)
+      api/            # routers FastAPI (incluye scheduler, métricas y exportación)
       security/       # auth, políticas, sanitización
-      services/       # fachadas: agent_runner, documentos, ejecuciones, métricas, exportación
+      services/       # fachadas: agent_runner, scheduler, documentos, ejecuciones, métricas
     data/             # SQLite + documentos subidos (no versionado)
-    tests/            # 88 tests
+    tests/            # 107 tests
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica
   OCS-Platform.bat    # gestor todo-en-uno para Windows

@@ -15,7 +15,7 @@ cita en su respuesta. No usan el LLM, ni la red, ni el sistema de archivos fuera
 
 El `ToolRegistry` aplica la **allow-list del agente** y es la única vía de invocación.
 
-## Catálogo (19)
+## Catálogo (24)
 
 ### Documentales
 | Herramienta | Qué hace |
@@ -55,6 +55,15 @@ El `ToolRegistry` aplica la **allow-list del agente** y es la única vía de inv
 | `calculate_cvss_priority` | CVSS × criticidad × exposición × exploit → P1-P4 + SLA + justificación |
 | `generate_compliance_gap` | Gap analysis contra subconjunto ISO 27001:2022 / RGPD: cobertura % y brechas |
 | `check_prompt_injection_patterns` | Detección defensiva de 9 familias de inyección + mitigaciones |
+
+### Programación (análisis estático, **sin ejecutar** el código)
+| Herramienta | Qué hace |
+|---|---|
+| `analyze_code_structure` | Funciones, clases, imports, complejidad ciclomática y métricas (AST en Python; heurística en otros lenguajes) |
+| `review_code_quality` | Hallazgos de calidad con línea/severidad: funciones largas, exceso de argumentos, sin docstring, except desnudo, líneas largas, TODOs |
+| `scan_code_security` | SAST heurístico con CWE: eval/exec, inyección de comandos/SQL, deserialización insegura, hash débil, TLS sin verificar, secretos embebidos |
+| `generate_test_skeleton` | Esqueletos de tests (pytest/unittest) para las funciones públicas de un módulo Python |
+| `extract_code_todos` | Marcadores TODO/FIXME/HACK/XXX/BUG con línea y agrupados por tipo |
 
 ## Reglas de seguridad (obligatorias para toda herramienta)
 
