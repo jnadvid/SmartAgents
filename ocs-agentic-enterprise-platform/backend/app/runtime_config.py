@@ -22,8 +22,23 @@ EDITABLE: dict[str, type] = {
     "pentest_scope_allowlist": str,
     "pentest_execution_mode": str,
     "pentest_wsl_distro": str,
+    "pentest_wsl_user": str,
+    "pentest_wsl_password": str,
+    "smtp_host": str,
+    "smtp_port": int,
+    "smtp_user": str,
+    "smtp_password": str,
+    "smtp_from": str,
+    "smtp_use_tls": bool,
+    "notify_email": str,
 }
+# Claves secretas: se persisten y usan, pero NUNCA se devuelven por la API ni se loguean.
+SECRET_KEYS = frozenset({"pentest_wsl_password", "smtp_password"})
 _MODES = ("native", "wsl")
+
+
+def is_secret(key: str) -> bool:
+    return key in SECRET_KEYS
 
 _overlay: dict[str, Any] = {}
 
@@ -36,6 +51,15 @@ def _env_defaults() -> dict[str, Any]:
         "pentest_scope_allowlist": s.pentest_scope_allowlist,
         "pentest_execution_mode": s.pentest_execution_mode,
         "pentest_wsl_distro": s.pentest_wsl_distro,
+        "pentest_wsl_user": s.pentest_wsl_user,
+        "pentest_wsl_password": s.pentest_wsl_password,
+        "smtp_host": s.smtp_host,
+        "smtp_port": s.smtp_port,
+        "smtp_user": s.smtp_user,
+        "smtp_password": s.smtp_password,
+        "smtp_from": s.smtp_from,
+        "smtp_use_tls": s.smtp_use_tls,
+        "notify_email": s.notify_email,
     }
 
 
@@ -63,6 +87,11 @@ def _coerce(key: str, value: Any) -> Any:
         if isinstance(value, str):
             return value.strip().lower() in ("1", "true", "yes", "on", "si", "sí")
         return bool(value)
+    if expected is int:
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"'{key}' debe ser un número entero.") from exc
     if expected is str:
         return "" if value is None else str(value)
     return value
@@ -78,8 +107,19 @@ def validate(changes: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("pentest_execution_mode debe ser 'native' o 'wsl'.")
         if key == "pentest_wsl_distro" and not str(coerced).replace("-", "").replace(".", "").replace("_", "").isalnum():
             raise ValueError("Nombre de distribución WSL inválido.")
+        if key == "smtp_port" and not (1 <= int(coerced) <= 65535):
+            raise ValueError("smtp_port fuera de rango (1-65535).")
         clean[key] = coerced
     return clean
+
+
+def public_effective() -> dict[str, Any]:
+    """Valores efectivos SIN secretos; añade '<clave>_set' para los secretos."""
+    values = all_effective()
+    public = {k: v for k, v in values.items() if k not in SECRET_KEYS}
+    for key in SECRET_KEYS:
+        public[f"{key}_set"] = bool(values.get(key))
+    return public
 
 
 def set_overlay(values: dict[str, Any]) -> None:

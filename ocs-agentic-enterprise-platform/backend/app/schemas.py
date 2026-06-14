@@ -463,8 +463,18 @@ class SettingsOut(BaseModel):
     pentest_scope_allowlist: str
     pentest_execution_mode: str
     pentest_wsl_distro: str
+    pentest_wsl_user: str
+    pentest_wsl_password_set: bool = False
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_from: str
+    smtp_use_tls: bool
+    smtp_password_set: bool = False
+    notify_email: str
     host_os: str
     wsl_available: bool
+    email_configured: bool = False
     available_models: list[str] = []
 
 
@@ -474,6 +484,19 @@ class SettingsUpdate(BaseModel):
     pentest_scope_allowlist: str | None = None
     pentest_execution_mode: Literal["native", "wsl"] | None = None
     pentest_wsl_distro: str | None = None
+    pentest_wsl_user: str | None = None
+    pentest_wsl_password: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool | None = None
+    notify_email: str | None = None
+
+
+class EmailTestRequest(BaseModel):
+    to: str = Field(min_length=3, description="Destinatario de la prueba")
 
 
 # ---------------------------------------------------------------------------
@@ -509,11 +532,23 @@ class PentestRunRequest(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict, description="Opciones por herramienta (ports, wordlist…)")
     agent_name: str = Field(default="web_pentester", description="Agente de ciberseguridad que analiza")
     model: str | None = None
+    email_to: str | None = Field(default=None, description="Si se indica, envía el informe a este email")
+
+
+class PentestAutoRequest(BaseModel):
+    target: str = Field(min_length=1, max_length=2000, description="URL o host AUTORIZADO")
+    authorized: bool = Field(default=False, description="Confirmas tener autorización para el objetivo")
+    aggressive: bool = Field(default=False, description="Incluye fases activas (NSE vuln, sqlmap)")
+    options: dict[str, Any] = Field(default_factory=dict)
+    agent_name: str = Field(default="pentest_lead", description="Agente de ciberseguridad que redacta el informe")
+    model: str | None = None
+    email_to: str | None = Field(default=None, description="Si se indica, envía el informe a este email")
 
 
 class PentestToolResultOut(BaseModel):
     tool_name: str
     status: str
+    phase: str = ""
     summary: str = ""
     command: str = ""
     returncode: int | None = None
@@ -529,6 +564,8 @@ class PentestRunResponse(BaseModel):
     profile: str = ""
     tools: list[PentestToolResultOut] = []
     execution: ExecutionResponse | None = None
+    emailed: bool = False
+    email_message: str | None = None
 
 
 # ---------------------------------------------------------------------------

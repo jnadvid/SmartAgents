@@ -79,6 +79,17 @@ class Settings(BaseSettings):
     pentest_max_output_chars: int = 20000  # truncado de salida por herramienta
     pentest_execution_mode: str = "native"  # native | wsl (Windows + Kali)
     pentest_wsl_distro: str = "kali-linux"  # distribución WSL a usar en modo wsl
+    pentest_wsl_user: str = ""  # usuario de la distro WSL (opcional)
+    pentest_wsl_password: str = ""  # contraseña para sudo en WSL (secreto, opcional)
+
+    # Email / SMTP (notificaciones; vale para Gmail con contraseña de aplicación)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""  # secreto
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+    notify_email: str = ""  # destinatario por defecto
 
     # RAG
     rag_chunk_size: int = 1200

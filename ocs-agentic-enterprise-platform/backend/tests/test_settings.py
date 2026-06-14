@@ -49,3 +49,29 @@ def test_native_command_resolves_path() -> None:
     assert argv is not None and argv[0].endswith("true") and argv[-1] == "x"
     # Binario inexistente -> None
     assert runners.build_argv(RunContext(mode="native"), "binario_que_no_existe_xyz", []) is None
+
+
+def test_wsl_command_includes_user(monkeypatch) -> None:
+    monkeypatch.setattr(runners, "is_available", lambda ctx, binary: True)
+    argv = runners.build_argv(RunContext(mode="wsl", wsl_distro="kali-linux", wsl_user="kali"), "nmap", ["host"])
+    assert argv[:5] == ["wsl", "-d", "kali-linux", "-u", "kali"]
+
+
+def test_secrets_never_exposed(db_session) -> None:
+    runtime_config.persist(db_session, {"smtp_password": "supersecreta", "smtp_host": "smtp.x", "smtp_from": "a@b.com"})
+    public = runtime_config.public_effective()
+    assert "smtp_password" not in public and "pentest_wsl_password" not in public
+    assert public["smtp_password_set"] is True
+    # El valor real sigue disponible internamente para enviar emails.
+    assert runtime_config.effective("smtp_password") == "supersecreta"
+
+
+def test_empty_secret_keeps_existing(db_session) -> None:
+    runtime_config.persist(db_session, {"smtp_password": "clave1"})
+    # Simula el comportamiento de la API: vacío en un secreto = no cambiar.
+    changes = {"smtp_password": ""}
+    for secret in runtime_config.SECRET_KEYS:
+        if secret in changes and not str(changes[secret]).strip():
+            changes.pop(secret)
+    assert changes == {}
+    assert runtime_config.effective("smtp_password") == "clave1"
