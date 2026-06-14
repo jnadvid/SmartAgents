@@ -178,7 +178,10 @@
         <div class="card">
           <div class="card-head">
             <h3>Histórico de ejecuciones</h3>
-            <button id="btn-refresh-executions" class="btn ghost sm">↻ Actualizar</button>
+            <div>
+              <button id="btn-clear-failed" class="btn ghost sm">🧹 Borrar fallidas</button>
+              <button id="btn-refresh-executions" class="btn ghost sm">↻ Actualizar</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="table" id="executions-table">
@@ -315,6 +318,57 @@
               </table>
             </div>
             <div id="sched-detail" class="sched-detail hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PENTEST ===== -->
+      <section class="view" id="view-pentest">
+        <div id="pentest-status" class="sched-banner"></div>
+        <div class="split">
+          <div class="card form-card">
+            <h3>Pentest autorizado (Kali)</h3>
+            <p class="muted">Ejecuta herramientas reales (nmap, nikto, nuclei…) <strong>solo</strong> contra objetivos de tu alcance autorizado (<code>PENTEST_SCOPE_ALLOWLIST</code>). Desactivado por defecto.</p>
+
+            <label class="lbl">Objetivo (URL o host)</label>
+            <input id="pt-target" class="input" placeholder="https://mi-dominio-autorizado.com" />
+
+            <label class="lbl">Perfil de escaneo</label>
+            <select id="pt-profile" class="input">
+              <option value="recon">Recon — no intrusivo (nmap, whatweb, wafw00f, sslscan, dns)</option>
+              <option value="web">Web — incluye escaneo activo (nikto, nuclei, gobuster)</option>
+              <option value="full">Full — todas las herramientas</option>
+            </select>
+
+            <label class="lbl">Agente analista</label>
+            <select id="pt-agent" class="input"></select>
+
+            <label class="lbl">Modelo Ollama</label>
+            <select id="pt-model" class="input"><option value="">(modelo por defecto)</option></select>
+
+            <label class="check check-warn"><input type="checkbox" id="pt-authorized" />
+              Confirmo que tengo <strong>autorización</strong> para escanear este objetivo</label>
+
+            <div class="btn-row"><button id="btn-pentest-run" class="btn primary">Lanzar pentest</button></div>
+            <div id="pt-msg" class="muted"></div>
+          </div>
+
+          <div class="card result-card">
+            <div id="pt-empty" class="empty">
+              <div class="empty-icon">🛰️</div>
+              <p>Lanza un escaneo autorizado para ver la salida de las herramientas y el informe del agente.</p>
+            </div>
+            <div id="pt-loading" class="loading hidden">
+              <div class="spinner"></div><p>Ejecutando herramientas y analizando…</p>
+              <span class="loading-sub">El escaneo puede tardar varios minutos según el perfil.</span>
+            </div>
+            <div id="pt-result" class="hidden">
+              <div class="result-badges" id="pt-meta"></div>
+              <details class="acc" open><summary>🛠️ Salida de herramientas</summary>
+                <div id="pt-tools" class="pt-tools"></div></details>
+              <h4 class="mt">Informe del agente</h4>
+              <div class="result-output markdown" id="pt-report"></div>
+            </div>
           </div>
         </div>
       </section>

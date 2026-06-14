@@ -14,6 +14,7 @@ from app.agents.registry import AgentRegistry, build_default_registry as build_a
 from app.agents.squads import SquadRegistry, build_default_squad_registry
 from app.connectors.registry import ConnectorRegistry, build_default_connector_registry
 from app.config import get_settings
+from app.pentest.registry import PentestRegistry, build_default_pentest_registry
 from app.llm.base import BaseLLMProvider
 from app.llm.ollama_provider import OllamaProvider
 from app.orchestration.execution_engine import EngineResult, ExecutionEngine
@@ -61,6 +62,11 @@ def get_connector_registry() -> ConnectorRegistry:
     return build_default_connector_registry()
 
 
+@lru_cache
+def get_pentest_registry() -> PentestRegistry:
+    return build_default_pentest_registry()
+
+
 def reset_runtime_singletons() -> None:
     """Limpia los singletons (útil en tests)."""
     get_llm_provider.cache_clear()
@@ -68,6 +74,7 @@ def reset_runtime_singletons() -> None:
     get_agent_registry.cache_clear()
     get_squad_registry.cache_clear()
     get_connector_registry.cache_clear()
+    get_pentest_registry.cache_clear()
 
 
 class AgentRunner:

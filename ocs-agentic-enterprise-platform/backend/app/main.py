@@ -14,7 +14,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import agents, connectors, documents, executions, health, metrics, models, scheduler, tools
+from app.api import (
+    agents,
+    connectors,
+    documents,
+    executions,
+    health,
+    metrics,
+    models,
+    pentest,
+    scheduler,
+    tools,
+)
 from app.config import get_settings, setup_logging
 from app.database import SessionLocal, init_db
 
@@ -101,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(metrics.router)
     app.include_router(scheduler.router)
     app.include_router(connectors.router)
+    app.include_router(pentest.router)
 
     # Frontend estático servido en la raíz (después de las rutas de la API).
     frontend_dir = settings.frontend_dir

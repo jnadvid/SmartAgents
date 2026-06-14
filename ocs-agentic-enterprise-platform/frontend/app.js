@@ -18,6 +18,7 @@ const ICONS = {
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2 2.5-2.5z"/></svg>',
   agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 14c2.5 0 5 1.6 5 4.5"/></svg>',
   scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
+  pentest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
 };
 
 const VIEWS = [
@@ -26,6 +27,7 @@ const VIEWS = [
   { id: "agents", label: "Agentes", sub: "Catálogo por áreas y equipos" },
   { id: "executions", label: "Ejecuciones", sub: "Histórico y trazabilidad" },
   { id: "scheduler", label: "Programador", sub: "Tareas puntuales y periódicas" },
+  { id: "pentest", label: "Pentest", sub: "Escaneo autorizado con Kali" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
   { id: "tools", label: "Herramientas", sub: "Catálogo de herramientas locales" },
 ];
@@ -142,6 +144,7 @@ function switchView(id) {
   if (id === "agents") loadAgentsView();
   if (id === "executions") loadExecutions();
   if (id === "scheduler") loadScheduler();
+  if (id === "pentest") loadPentest();
   if (id === "documents") loadDocuments();
 }
 
@@ -287,6 +290,7 @@ async function loadModels() {
       models.map((m) => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join("");
     el("model-select").innerHTML = opts;
     if (el("sched-model")) el("sched-model").innerHTML = opts;
+    if (el("pt-model")) el("pt-model").innerHTML = opts;
   } catch (_) { el("model-select").innerHTML = '<option value="">(Ollama no disponible)</option>'; }
 }
 
@@ -475,10 +479,33 @@ async function loadExecutions() {
        <td>${escapeHtml(e.model_name)}</td><td>${statusBadge(e.status)}</td>
        <td>${e.confidence_score != null ? Math.round(e.confidence_score * 100) + "%" : "—"}</td>
        <td>${new Date(e.created_at).toLocaleString()}</td>
-       <td><button class="btn ghost sm" data-exec="${e.id}">Ver</button></td></tr>`).join("");
+       <td class="sched-actions"><button class="btn ghost sm" data-exec="${e.id}">Ver</button>
+         <button class="btn ghost sm" data-del-exec="${e.id}" title="Borrar">🗑</button></td></tr>`).join("");
     el("executions-table").querySelectorAll("button[data-exec]").forEach((b) =>
       b.addEventListener("click", () => showExecutionDetail(b.dataset.exec)));
+    el("executions-table").querySelectorAll("button[data-del-exec]").forEach((b) =>
+      b.addEventListener("click", () => deleteExecution(b.dataset.delExec)));
   } catch (_) {}
+}
+
+async function deleteExecution(id) {
+  if (!confirm(`¿Borrar la ejecución #${id}?`)) return;
+  try {
+    const res = await fetch(`/executions/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    toast("Ejecución borrada.", "ok");
+    el("execution-detail").classList.add("hidden");
+    loadExecutions();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function clearFailedExecutions() {
+  if (!confirm("¿Borrar TODAS las ejecuciones fallidas?")) return;
+  try {
+    const r = await api("/executions?status=failed", { method: "DELETE" });
+    toast(`${r.deleted} ejecución(es) borrada(s).`, "ok");
+    loadExecutions();
+  } catch (e) { toast(e.message, "err"); }
 }
 
 async function showExecutionDetail(id) {
@@ -715,6 +742,69 @@ async function createScheduledTask() {
 }
 
 // --------------------------------------------------------------------------
+// Pentest (Kali, autorizado)
+// --------------------------------------------------------------------------
+async function loadPentest() {
+  // Agentes de ciberseguridad como analistas.
+  if (!AGENTS.length) { try { AGENTS = await api("/agents"); } catch (_) {} }
+  const cyber = AGENTS.filter((a) => a.category === "cybersecurity");
+  el("pt-agent").innerHTML = cyber.map((a) =>
+    `<option value="${escapeHtml(a.name)}"${a.name === "web_pentester" ? " selected" : ""}>${escapeHtml(a.display_name)}</option>`).join("");
+  try {
+    const s = await api("/pentest/status");
+    const avail = s.tools.filter((t) => t.available).map((t) => t.name);
+    const dot = s.enabled && s.scope_configured ? "up" : "down";
+    let msg;
+    if (!s.enabled) msg = "Pentest DESACTIVADO. Activa ENABLE_PENTEST_TOOLS=true en .env.";
+    else if (!s.scope_configured) msg = "Sin alcance autorizado: define PENTEST_SCOPE_ALLOWLIST en .env.";
+    else msg = `Activo · ${s.scope_count} entrada(s) de alcance · herramientas instaladas: ${avail.length ? avail.join(", ") : "ninguna detectada"}`;
+    el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}`;
+  } catch (e) { el("pentest-status").textContent = ""; }
+}
+
+async function runPentest() {
+  const target = el("pt-target").value.trim();
+  if (!target) return toast("Indica un objetivo.", "err");
+  if (!el("pt-authorized").checked) return toast("Debes confirmar la autorización.", "err");
+  const body = {
+    target, authorized: true, profile: el("pt-profile").value,
+    agent_name: el("pt-agent").value, model: el("pt-model").value || null,
+  };
+  el("pt-empty").classList.add("hidden");
+  el("pt-result").classList.add("hidden");
+  el("pt-loading").classList.remove("hidden");
+  el("btn-pentest-run").disabled = true;
+  el("pt-msg").textContent = "";
+  try {
+    const r = await api("/pentest/run", { method: "POST", body: JSON.stringify(body) });
+    renderPentest(r);
+  } catch (e) { el("pt-msg").textContent = `Error: ${e.message}`; toast(e.message, "err"); }
+  finally { el("pt-loading").classList.add("hidden"); el("btn-pentest-run").disabled = false; }
+}
+
+function renderPentest(r) {
+  el("pt-result").classList.remove("hidden");
+  const statusKind = r.status === "completed" ? "ok" : r.status === "denied" || r.status === "disabled" ? "warn" : "err";
+  el("pt-meta").innerHTML = [
+    `<span class="badge ${statusKind}">${escapeHtml(r.status)}</span>`,
+    r.host ? `<span class="badge">🎯 ${escapeHtml(r.host)}</span>` : "",
+    r.profile ? `<span class="badge">${escapeHtml(r.profile)}</span>` : "",
+    `<span class="badge">${escapeHtml(r.message)}</span>`,
+  ].join(" ");
+  el("pt-tools").innerHTML = (r.tools || []).map((t) =>
+    `<div class="pt-tool"><div class="pt-tool-head"><strong>${escapeHtml(t.tool_name)}</strong>
+      <span class="badge ${t.status === "success" ? "ok" : t.status === "unavailable" ? "warn" : "err"}">${escapeHtml(t.status)}</span>
+      <span class="muted">${t.duration_ms}ms</span></div>
+      ${t.command ? `<div class="doc-meta">${escapeHtml(t.command)}</div>` : ""}
+      <pre class="pt-output">${escapeHtml(t.output || t.summary || "(sin salida)")}</pre></div>`).join("")
+    || '<div class="muted">No se ejecutaron herramientas.</div>';
+  el("pt-report").innerHTML = r.execution && r.execution.final_output
+    ? renderMarkdown(r.execution.final_output)
+    : `<p class="muted">${escapeHtml(r.status === "completed" ? "Sin informe." : r.message)}</p>`;
+  if (r.execution && r.execution.execution_id) LAST_EXECUTION_ID = r.execution.execution_id;
+}
+
+// --------------------------------------------------------------------------
 // Init
 // --------------------------------------------------------------------------
 function setupSeg(segId, onChange) {
@@ -743,9 +833,13 @@ document.addEventListener("DOMContentLoaded", () => {
   el("btn-create-sched").addEventListener("click", createScheduledTask);
   el("btn-refresh-sched").addEventListener("click", loadScheduler);
   applySchedTarget(); applySchedKind(); applySchedConnector();
+
+  // Pentest
+  el("btn-pentest-run").addEventListener("click", runPentest);
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);
+  el("btn-clear-failed").addEventListener("click", clearFailedExecutions);
   el("btn-detail-md").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=markdown`, "_blank"));
   el("btn-detail-html").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=html`, "_blank"));
   el("btn-upload").addEventListener("click", uploadDocument);

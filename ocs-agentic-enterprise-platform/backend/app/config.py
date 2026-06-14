@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     connector_timeout: int = 15
     wazuh_alerts_path: str = ""  # ruta al alerts.json de Wazuh (vacío = data/connectors/wazuh/alerts.json)
 
+    # Herramientas de pentesting (Kali). DESACTIVADAS por defecto: ejecutan binarios
+    # reales sobre objetivos autorizados. Solo escanean hosts de la allow-list de
+    # alcance y requieren confirmación de autorización en cada ejecución.
+    enable_pentest_tools: bool = False
+    pentest_scope_allowlist: str = ""  # dominios/IPs/CIDR autorizados (coma-separados)
+    pentest_timeout: int = 180  # timeout por herramienta (s)
+    pentest_max_output_chars: int = 20000  # truncado de salida por herramienta
+
     # RAG
     rag_chunk_size: int = 1200
     rag_chunk_overlap: int = 150
@@ -112,6 +120,10 @@ class Settings(BaseSettings):
     @property
     def http_connector_hosts(self) -> set[str]:
         return {h.strip().lower() for h in self.http_connector_allowlist.split(",") if h.strip()}
+
+    @property
+    def pentest_scope_entries(self) -> list[str]:
+        return [e.strip().lower() for e in self.pentest_scope_allowlist.split(",") if e.strip()]
 
     @property
     def frontend_dir(self) -> Path:

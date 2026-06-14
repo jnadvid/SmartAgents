@@ -45,7 +45,7 @@ class AgentRegistry:
 
 
 def build_default_registry() -> AgentRegistry:
-    """Construye el registro con los 44 agentes especializados por áreas."""
+    """Construye el registro con los 45 agentes especializados por áreas."""
     from app.agents.agile_coach_agent import AgileCoachAgent
     from app.agents.appsec_engineer_agent import AppSecEngineerAgent
     from app.agents.backend_developer_agent import BackendDeveloperAgent
@@ -89,6 +89,7 @@ def build_default_registry() -> AgentRegistry:
     from app.agents.threat_intel_analyst_agent import ThreatIntelAnalystAgent
     from app.agents.ux_psychologist_agent import UXPsychologistAgent
     from app.agents.vulnerability_triage_agent import VulnerabilityTriageAgent
+    from app.agents.web_pentester_agent import WebPentesterAgent
     from app.agents.wellbeing_coach_agent import WellbeingCoachAgent
 
     registry = AgentRegistry()
@@ -141,6 +142,7 @@ def build_default_registry() -> AgentRegistry:
             RedTeamOperatorAgent(),
             PurpleTeamLeadAgent(),
             OtSecurityAnalystAgent(),
+            WebPentesterAgent(),
             # --- Compliance ---
             ComplianceAgent(),
             DataProtectionOfficerAgent(),

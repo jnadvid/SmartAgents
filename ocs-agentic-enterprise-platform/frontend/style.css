@@ -328,3 +328,11 @@ textarea.input { resize: vertical; }
 .agent-access { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; align-items: center; }
 .access-chip { font-size: 0.66rem; padding: 2px 7px; border-radius: 6px; background: rgba(91, 140, 255, 0.14); border: 1px solid rgba(91, 140, 255, 0.35); color: #bcd0ff; }
 .input.mono { font-family: "Consolas", "SF Mono", ui-monospace, monospace; font-size: 0.8rem; }
+
+/* ---------- Pentest ---------- */
+.check-warn { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 9px 12px; border: 1px solid rgba(246, 181, 69, 0.5); background: rgba(246, 181, 69, 0.08); border-radius: 9px; font-size: 0.84rem; }
+.pt-tools { display: flex; flex-direction: column; gap: 10px; }
+.pt-tool { border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px; background: var(--bg-2); }
+.pt-tool-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.pt-tool-head strong { flex: 1; }
+.pt-output { margin: 6px 0 0; padding: 9px; background: #0a0e14; border: 1px solid var(--border-soft); border-radius: 8px; max-height: 280px; overflow: auto; font-family: "Consolas", ui-monospace, monospace; font-size: 0.74rem; white-space: pre-wrap; word-break: break-word; color: #cdd9e5; }

@@ -453,6 +453,59 @@ class ConnectorReadResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Pentesting (herramientas de Kali, autorizado)
+# ---------------------------------------------------------------------------
+
+
+class PentestToolInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    binary: str
+    intrusive: bool
+    available: bool
+
+
+class PentestStatusResponse(BaseModel):
+    enabled: bool
+    scope_configured: bool
+    scope_count: int
+    profiles: dict[str, list[str]]
+    tools: list[PentestToolInfo]
+
+
+class PentestRunRequest(BaseModel):
+    target: str = Field(min_length=1, max_length=2000, description="URL o host AUTORIZADO a escanear")
+    authorized: bool = Field(default=False, description="Confirmas tener autorización para el objetivo")
+    profile: Literal["recon", "web", "full"] = "recon"
+    tools: list[str] | None = Field(default=None, description="Herramientas concretas (anula el perfil)")
+    options: dict[str, Any] = Field(default_factory=dict, description="Opciones por herramienta (ports, wordlist…)")
+    agent_name: str = Field(default="web_pentester", description="Agente de ciberseguridad que analiza")
+    model: str | None = None
+
+
+class PentestToolResultOut(BaseModel):
+    tool_name: str
+    status: str
+    summary: str = ""
+    command: str = ""
+    returncode: int | None = None
+    duration_ms: int = 0
+    output: str = ""
+
+
+class PentestRunResponse(BaseModel):
+    target: str
+    host: str
+    status: str
+    message: str
+    profile: str = ""
+    tools: list[PentestToolResultOut] = []
+    execution: ExecutionResponse | None = None
+
+
+# ---------------------------------------------------------------------------
 # Herramientas
 # ---------------------------------------------------------------------------
 

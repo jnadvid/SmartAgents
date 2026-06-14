@@ -34,3 +34,25 @@ def get_chain_of_work(db: Session, execution_id: int) -> list[ChainOfWorkStep]:
         .order_by(ChainOfWorkStep.step_number)
     )
     return list(db.execute(stmt).scalars())
+
+
+def delete_execution(db: Session, execution_id: int) -> bool:
+    """Borra una ejecución y, en cascada, sus pasos, logs y ruta. Devuelve si existía."""
+    execution = db.get(AgentExecution, execution_id)
+    if execution is None:
+        return False
+    db.delete(execution)
+    db.commit()
+    return True
+
+
+def delete_executions(db: Session, *, status: str | None = None) -> int:
+    """Borra ejecuciones (opcionalmente filtradas por estado). Devuelve cuántas se borraron."""
+    stmt = select(AgentExecution)
+    if status:
+        stmt = stmt.where(AgentExecution.status == status)
+    executions = list(db.execute(stmt).scalars())
+    for execution in executions:
+        db.delete(execution)
+    db.commit()
+    return len(executions)

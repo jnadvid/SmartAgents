@@ -135,6 +135,30 @@ def test_unknown_manual_agent_rejected(engine) -> None:
         engine.run(task="hola", agent_name="agente_fantasma")
 
 
+def test_delete_execution_cascades(engine, db_session) -> None:
+    from app.services import execution_service
+
+    result = engine.run(task="Hazme un plan de proyecto de 4 semanas", model="fake-model")
+    eid = result.execution.id
+    assert execution_service.delete_execution(db_session, eid) is True
+    assert db_session.get(AgentExecution, eid) is None
+    remaining = db_session.execute(
+        select(ChainOfWorkStep).where(ChainOfWorkStep.execution_id == eid)
+    ).scalars().all()
+    assert remaining == []  # los pasos se borran en cascada
+    assert execution_service.delete_execution(db_session, eid) is False
+
+
+def test_delete_executions_by_status(engine, db_session) -> None:
+    from app.services import execution_service
+
+    engine.run(task="Hazme un plan de proyecto de 4 semanas", model="fake-model")
+    engine.run(task="Analiza este CSV de ventas", model="modelo-inexistente")  # falla
+    deleted = execution_service.delete_executions(db_session, status="failed")
+    assert deleted >= 1
+    assert all(e.status != "failed" for e in execution_service.list_executions(db_session))
+
+
 def test_secrets_are_redacted_in_audit_trail(engine, db_session) -> None:
     result = engine.run(
         task="Organiza mi semana. Mi api_key=sk-abcdefghijklmnop1234 no debería guardarse.",
