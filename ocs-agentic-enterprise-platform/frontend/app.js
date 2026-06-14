@@ -1,4 +1,4 @@
-/* OCS Agentic Enterprise Platform - frontend Fase 2 (vanilla JS, offline) */
+/* OCS Agentic Enterprise Platform - frontend Fase 3 (vanilla JS, offline) */
 "use strict";
 
 const API = "";
