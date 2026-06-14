@@ -5,13 +5,19 @@
 set -euo pipefail
 
 PACKAGES=(
-  nmap          # puertos y servicios
+  nmap          # puertos y servicios (+ NSE vuln)
   whatweb       # fingerprinting web
   wafw00f       # detección de WAF
   sslscan       # análisis TLS/SSL
   dnsrecon      # enumeración DNS
   nikto         # escáner web
   gobuster      # fuzzing de directorios
+  feroxbuster   # descubrimiento de contenido recursivo
+  sqlmap        # inyección SQL
+  wpscan        # escáner de WordPress
+  subfinder     # subdominios (pasivo)
+  theharvester  # OSINT pasivo
+  httpx-toolkit # sondeo web (projectdiscovery; binario 'httpx')
   seclists      # diccionarios (wordlists)
 )
 
@@ -28,7 +34,7 @@ apt-get install -y nuclei || echo "[!] nuclei no se pudo instalar por apt; inst�
 
 echo
 echo "[*] Verificación de binarios:"
-for bin in nmap whatweb wafw00f sslscan dnsrecon nikto gobuster nuclei; do
+for bin in nmap whatweb wafw00f sslscan dnsrecon nikto gobuster feroxbuster sqlmap wpscan subfinder theHarvester httpx nuclei; do
   if command -v "$bin" >/dev/null 2>&1; then
     echo "    [ok] $bin"
   else

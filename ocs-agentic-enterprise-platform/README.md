@@ -117,16 +117,17 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **45 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
-  purple team, SOC, OT y pentester—, negocio, RRHH, psicología, compliance, proyectos, etc.).
+- **46 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
+  purple team, SOC, OT, pentester y líder de pentest—, negocio, RRHH, psicología, etc.).
 - **12 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
 - **Conectores de datos** (Wazuh, JSON/CSV local, HTTP opt-in) con **acceso de lectura
   definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
 - **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
   ejecutar** (p. ej. el bucle del SOC).
-- **Pentesting con Kali** (opt-in, alcance autorizado): los agentes de ciberseguridad lanzan
-  herramientas reales (nmap, nikto, nuclei…) en **modo nativo o WSL (Windows + Kali)** y
-  analizan los resultados — ver [`docs/pentest.md`](docs/pentest.md).
+- **Pentesting con Kali** (opt-in, alcance autorizado): 15 herramientas (nmap, nikto, nuclei,
+  sqlmap, wpscan, subfinder…) en **modo nativo o WSL (Windows + Kali)**, **pentest autónomo
+  por fases (PTES/OWASP)** con informe detallado y **envío por email** — ver
+  [`docs/pentest.md`](docs/pentest.md).
 - **Ajustes desde la web**: modelo Ollama por defecto, activar pentest, alcance autorizado y
   entorno de ejecución (nativo/WSL), persistidos en la BD (pestaña **Ajustes**).
 - **24 herramientas** deterministas + análisis estático de código: sin Internet, sin comandos
@@ -299,7 +300,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET | `/connectors`, `/connectors/categories` | Catálogo de conectores de datos |
 | POST | `/connectors/{name}/read` | Vista previa de lectura de una fuente |
 | GET | `/pentest/status` · POST `/pentest/run` | Pentesting con Kali (opt-in, autorizado) |
-| GET/PUT | `/settings` | Ajustes editables: modelo por defecto, pentest, modo nativo/WSL |
+| POST | `/pentest/auto` | Pentest autónomo por fases (PTES/OWASP) + email opcional |
+| GET/PUT | `/settings` · POST `/settings/test-email` | Ajustes (modelo, pentest, WSL, SMTP) y prueba de email |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
 | DELETE | `/executions/{id}` · `/executions?status=failed` | Borrar una ejecución o limpiar por estado |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
@@ -372,7 +374,8 @@ ocs-agentic-enterprise-platform/
       agents/         # BaseAgent + 45 agentes + squads + registro
       orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
       connectors/     # conectores de datos (Wazuh, JSON/CSV, HTTP opt-in) + registro
-      pentest/        # herramientas de Kali (scope, base sin-shell, registro, servicio)
+      pentest/        # 15 herramientas de Kali (scope, runner native/WSL, fases, servicio)
+      notifications/  # email (SMTP/Gmail)
       llm/            # contrato LLM + OllamaProvider + ModelRouter
       tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
       scheduler/      # cálculo de fechas (cron/diaria/…) + hilo del programador
@@ -384,7 +387,7 @@ ocs-agentic-enterprise-platform/
     runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 140 tests
+    tests/            # 148 tests
   scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
