@@ -814,6 +814,10 @@ async function loadPentest() {
     const avail = s.tools.filter((t) => t.available).map((t) => t.name);
     el("pt-wordlist").innerHTML = '<option value="">(por defecto)</option>' +
       (s.wordlists || []).map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w.split("/").pop())}</option>`).join("");
+    PT_TYPES = s.pentest_types || {};
+    el("pt-type").innerHTML = Object.entries(PT_TYPES).map(([k, v]) =>
+      `<option value="${escapeHtml(k)}">${escapeHtml(v.label)}</option>`).join("");
+    applyPtType();
     renderToolsGrid(s.tools);
     const dot = s.enabled && s.scope_configured && s.mode_ok ? "up" : "down";
     let msg;
@@ -825,11 +829,17 @@ async function loadPentest() {
   } catch (e) { el("pentest-status").textContent = ""; }
 }
 
+let PT_TYPES = {};
 function applyPtMode() {
   const auto = el("pt-auto").checked;
   el("pt-profile-wrap").classList.toggle("hidden", auto);
   el("pt-aggressive-wrap").classList.toggle("hidden", !auto);
+  el("pt-type-wrap").classList.toggle("hidden", !auto);
   if (auto && [...el("pt-agent").options].some((o) => o.value === "pentest_lead")) el("pt-agent").value = "pentest_lead";
+}
+function applyPtType() {
+  const t = PT_TYPES[el("pt-type").value];
+  el("pt-type-hint").textContent = t ? `Analista: ${t.agent} · Metodología: ${t.methodology}` : "";
 }
 
 function renderToolsGrid(tools) {
@@ -884,7 +894,9 @@ async function runPentest() {
   const options = el("pt-wordlist").value ? { wordlist: el("pt-wordlist").value } : {};
   const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: el("pt-email").value.trim() || null, options };
   const path = auto ? "/pentest/start-auto" : "/pentest/start";
-  const body = auto ? { ...common, aggressive: el("pt-aggressive").checked } : { ...common, profile: el("pt-profile").value };
+  const body = auto
+    ? { ...common, aggressive: el("pt-aggressive").checked, pentest_type: el("pt-type").value || "web" }
+    : { ...common, profile: el("pt-profile").value };
 
   el("pt-empty").classList.add("hidden");
   el("pt-result").classList.add("hidden");
@@ -1104,6 +1116,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Pentest
   el("btn-pentest-run").addEventListener("click", runPentest);
   el("pt-auto").addEventListener("change", applyPtMode);
+  el("pt-type").addEventListener("change", applyPtType);
   el("btn-pt-recheck").addEventListener("click", recheckTools);
   el("btn-pt-install").addEventListener("click", installTools);
 

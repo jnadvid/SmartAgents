@@ -23,7 +23,7 @@
       <div class="sidebar-foot">
         <div class="status-line" id="status-api"><span class="dot"></span><span class="status-label">API</span><span class="status-val">…</span></div>
         <div class="status-line" id="status-ollama"><span class="dot"></span><span class="status-label">Ollama</span><span class="status-val">…</span></div>
-        <div class="version">v0.11.1 · Fase 3 · 100% local</div>
+        <div class="version">v0.12 · Fase 3 · 100% local</div>
       </div>
     </aside>
 
@@ -362,7 +362,13 @@
             <input id="pt-target" class="input" placeholder="https://mi-dominio-autorizado.com" />
 
             <label class="check"><input type="checkbox" id="pt-auto" />
-              <strong>Pentest autónomo</strong> — todas las fases (OSINT, enumeración, WAF, vulnerabilidades, web) con metodología PTES/OWASP</label>
+              <strong>Pentest autónomo</strong> — adaptativo por fases (PTES/OWASP), decide según los hallazgos</label>
+
+            <div id="pt-type-wrap" class="hidden">
+              <label class="lbl">Tipo de pentest</label>
+              <select id="pt-type" class="input"></select>
+              <div class="agent-hint" id="pt-type-hint"></div>
+            </div>
 
             <div id="pt-profile-wrap">
               <label class="lbl">Perfil de escaneo</label>

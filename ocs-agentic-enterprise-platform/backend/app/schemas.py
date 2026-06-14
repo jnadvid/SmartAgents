@@ -531,6 +531,7 @@ class PentestStatusResponse(BaseModel):
     mode_check: str = ""
     wordlists: list[str] = []
     profiles: dict[str, list[str]]
+    pentest_types: dict[str, dict[str, str]] = {}
     tools: list[PentestToolInfo]
 
 
@@ -548,6 +549,7 @@ class PentestRunRequest(BaseModel):
 class PentestAutoRequest(BaseModel):
     target: str = Field(min_length=1, max_length=2000, description="URL o host AUTORIZADO")
     authorized: bool = Field(default=False, description="Confirmas tener autorización para el objetivo")
+    pentest_type: Literal["web", "network", "active_directory", "api", "external", "ot"] = "web"
     aggressive: bool = Field(default=False, description="Incluye fases activas (NSE vuln, sqlmap)")
     options: dict[str, Any] = Field(default_factory=dict)
     agent_name: str = Field(default="pentest_lead", description="Agente de ciberseguridad que redacta el informe")

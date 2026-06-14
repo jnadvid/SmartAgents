@@ -117,8 +117,8 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **46 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
-  purple team, SOC, OT, pentester y líder de pentest—, negocio, RRHH, psicología, etc.).
+- **49 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
+  purple team, SOC, OT y pentesters de web/red/AD/API—, negocio, RRHH, psicología, etc.).
 - **12 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
 - **Conectores de datos** (Wazuh, JSON/CSV local, HTTP opt-in) con **acceso de lectura
   definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
@@ -391,7 +391,7 @@ ocs-agentic-enterprise-platform/
     runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 157 tests
+    tests/            # 159 tests
   scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
