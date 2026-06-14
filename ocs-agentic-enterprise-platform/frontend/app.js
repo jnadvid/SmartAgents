@@ -753,6 +753,7 @@ async function loadPentest() {
   const cyber = AGENTS.filter((a) => a.category === "cybersecurity");
   el("pt-agent").innerHTML = cyber.map((a) =>
     `<option value="${escapeHtml(a.name)}"${a.name === "web_pentester" ? " selected" : ""}>${escapeHtml(a.display_name)}</option>`).join("");
+  applyPtMode();
   try {
     const s = await api("/pentest/status");
     const avail = s.tools.filter((t) => t.available).map((t) => t.name);
@@ -765,21 +766,30 @@ async function loadPentest() {
   } catch (e) { el("pentest-status").textContent = ""; }
 }
 
+function applyPtMode() {
+  const auto = el("pt-auto").checked;
+  el("pt-profile-wrap").classList.toggle("hidden", auto);
+  el("pt-aggressive-wrap").classList.toggle("hidden", !auto);
+  if (auto && [...el("pt-agent").options].some((o) => o.value === "pentest_lead")) el("pt-agent").value = "pentest_lead";
+}
+
 async function runPentest() {
   const target = el("pt-target").value.trim();
   if (!target) return toast("Indica un objetivo.", "err");
   if (!el("pt-authorized").checked) return toast("Debes confirmar la autorización.", "err");
-  const body = {
-    target, authorized: true, profile: el("pt-profile").value,
-    agent_name: el("pt-agent").value, model: el("pt-model").value || null,
-  };
+  const auto = el("pt-auto").checked;
+  const email = el("pt-email").value.trim() || null;
+  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: email };
+  const path = auto ? "/pentest/auto" : "/pentest/run";
+  const body = auto ? { ...common, aggressive: el("pt-aggressive").checked } : { ...common, profile: el("pt-profile").value };
+
   el("pt-empty").classList.add("hidden");
   el("pt-result").classList.add("hidden");
   el("pt-loading").classList.remove("hidden");
   el("btn-pentest-run").disabled = true;
   el("pt-msg").textContent = "";
   try {
-    const r = await api("/pentest/run", { method: "POST", body: JSON.stringify(body) });
+    const r = await api(path, { method: "POST", body: JSON.stringify(body) });
     renderPentest(r);
   } catch (e) { el("pt-msg").textContent = `Error: ${e.message}`; toast(e.message, "err"); }
   finally { el("pt-loading").classList.add("hidden"); el("btn-pentest-run").disabled = false; }
@@ -792,10 +802,12 @@ function renderPentest(r) {
     `<span class="badge ${statusKind}">${escapeHtml(r.status)}</span>`,
     r.host ? `<span class="badge">🎯 ${escapeHtml(r.host)}</span>` : "",
     r.profile ? `<span class="badge">${escapeHtml(r.profile)}</span>` : "",
+    r.emailed ? `<span class="badge ok">📧 enviado</span>` : (r.email_message ? `<span class="badge err">📧 ${escapeHtml(r.email_message)}</span>` : ""),
     `<span class="badge">${escapeHtml(r.message)}</span>`,
   ].join(" ");
   el("pt-tools").innerHTML = (r.tools || []).map((t) =>
     `<div class="pt-tool"><div class="pt-tool-head"><strong>${escapeHtml(t.tool_name)}</strong>
+      ${t.phase ? `<span class="badge">${escapeHtml(t.phase)}</span>` : ""}
       <span class="badge ${t.status === "success" ? "ok" : t.status === "unavailable" ? "warn" : "err"}">${escapeHtml(t.status)}</span>
       <span class="muted">${t.duration_ms}ms</span></div>
       ${t.command ? `<div class="doc-meta">${escapeHtml(t.command)}</div>` : ""}
@@ -824,7 +836,18 @@ async function loadSettings() {
     el("set-scope").value = s.pentest_scope_allowlist || "";
     el("set-mode").value = s.pentest_execution_mode;
     el("set-distro").value = s.pentest_wsl_distro || "kali-linux";
-    el("settings-host").innerHTML = `<span class="status-dot ${s.wsl_available ? "up" : "down"}"></span> Sistema: <strong>${escapeHtml(s.host_os)}</strong> · WSL ${s.wsl_available ? "detectado" : "no detectado"} · ${s.available_models.length} modelo(s) Ollama`;
+    el("set-wsl-user").value = s.pentest_wsl_user || "";
+    el("set-wsl-pass").placeholder = s.pentest_wsl_password_set ? "(configurada · sin cambios)" : "(sin definir)";
+    // Email
+    el("set-smtp-host").value = s.smtp_host || "";
+    el("set-smtp-port").value = s.smtp_port || 587;
+    el("set-smtp-user").value = s.smtp_user || "";
+    el("set-smtp-from").value = s.smtp_from || "";
+    el("set-smtp-pass").placeholder = s.smtp_password_set ? "(configurada · sin cambios)" : "(sin definir)";
+    el("set-smtp-tls").checked = s.smtp_use_tls;
+    el("set-notify").value = s.notify_email || "";
+    el("set-test-email").value = s.notify_email || "";
+    el("settings-host").innerHTML = `<span class="status-dot ${s.wsl_available ? "up" : "down"}"></span> Sistema: <strong>${escapeHtml(s.host_os)}</strong> · WSL ${s.wsl_available ? "detectado" : "no detectado"} · ${s.available_models.length} modelo(s) · email ${s.email_configured ? "configurado" : "sin configurar"}`;
     applyWslHint();
   } catch (e) { el("settings-msg").textContent = e.message; }
 }
@@ -845,15 +868,37 @@ async function saveSettings() {
     pentest_scope_allowlist: el("set-scope").value.trim(),
     pentest_execution_mode: el("set-mode").value,
     pentest_wsl_distro: el("set-distro").value.trim() || "kali-linux",
+    pentest_wsl_user: el("set-wsl-user").value.trim(),
+    smtp_host: el("set-smtp-host").value.trim(),
+    smtp_port: parseInt(el("set-smtp-port").value, 10) || 587,
+    smtp_user: el("set-smtp-user").value.trim(),
+    smtp_from: el("set-smtp-from").value.trim(),
+    smtp_use_tls: el("set-smtp-tls").checked,
+    notify_email: el("set-notify").value.trim(),
   };
+  // Las contraseñas solo se envían si se escriben (vacío = no cambiar).
+  if (el("set-wsl-pass").value) body.pentest_wsl_password = el("set-wsl-pass").value;
+  if (el("set-smtp-pass").value) body.smtp_password = el("set-smtp-pass").value;
   el("btn-save-settings").disabled = true;
   try {
     await api("/settings", { method: "PUT", body: JSON.stringify(body) });
     el("settings-msg").textContent = "✓ Ajustes guardados.";
     toast("Ajustes guardados.", "ok");
-    loadModels();
+    el("set-wsl-pass").value = ""; el("set-smtp-pass").value = "";
+    loadModels(); loadSettings();
   } catch (e) { el("settings-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
   finally { el("btn-save-settings").disabled = false; }
+}
+
+async function testEmail() {
+  const to = el("set-test-email").value.trim();
+  if (!to) return toast("Indica un email para la prueba.", "err");
+  el("btn-test-email").disabled = true;
+  try {
+    const r = await api("/settings/test-email", { method: "POST", body: JSON.stringify({ to }) });
+    toast(r.message, r.ok ? "ok" : "err");
+  } catch (e) { toast(e.message, "err"); }
+  finally { el("btn-test-email").disabled = false; }
 }
 
 // --------------------------------------------------------------------------
@@ -888,9 +933,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Pentest
   el("btn-pentest-run").addEventListener("click", runPentest);
+  el("pt-auto").addEventListener("change", applyPtMode);
 
   // Ajustes
   el("btn-save-settings").addEventListener("click", saveSettings);
+  el("btn-test-email").addEventListener("click", testEmail);
   el("set-mode").addEventListener("change", applyWslHint);
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
