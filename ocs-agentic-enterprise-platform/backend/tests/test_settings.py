@@ -41,7 +41,10 @@ def test_validate_rejects_non_editable_and_bad_values() -> None:
 def test_wsl_command_is_prefixed(monkeypatch) -> None:
     monkeypatch.setattr(runners, "is_available", lambda ctx, binary: True)
     argv = runners.build_argv(RunContext(mode="wsl", wsl_distro="kali-linux"), "nmap", ["-sV", "host"])
-    assert argv == ["wsl", "-d", "kali-linux", "--", "nmap", "-sV", "host"]
+    # wsl -d kali-linux -- sh -c '<PATH>; exec "$@"' ocs nmap -sV host
+    assert argv[:6] == ["wsl", "-d", "kali-linux", "--", "sh", "-c"]
+    assert "export PATH=" in argv[6] and 'exec "$@"' in argv[6]
+    assert argv[-4:] == ["ocs", "nmap", "-sV", "host"]  # binario y args como posicionales
 
 
 def test_native_command_resolves_path() -> None:

@@ -36,7 +36,9 @@ def test_installer_runs_and_captures_log(monkeypatch) -> None:
 
     class FakePopen:
         def __init__(self, *args, **kwargs):
-            self.stdout = iter(["[*] instalando nmap\n", "    [ok] nmap\n"])
+            # En modo binario (sin text=) Popen.stdout itera BYTES.
+            self.stdout = iter([b"[*] instalando nmap\n", b"    [ok] nmap\n"])
+            self.stdin = None
             self.returncode = 0
 
         def wait(self, timeout=None):
