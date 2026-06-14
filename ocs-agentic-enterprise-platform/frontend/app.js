@@ -819,10 +819,11 @@ async function loadPentest() {
       `<option value="${escapeHtml(k)}">${escapeHtml(v.label)}</option>`).join("");
     applyPtType();
     renderToolsGrid(s.tools);
+    if (document.activeElement !== el("pt-scope")) el("pt-scope").value = s.scope_allowlist || "";
     const dot = s.enabled && s.scope_configured && s.mode_ok ? "up" : "down";
     let msg;
     if (!s.enabled) msg = "Pentest DESACTIVADO. Actívalo en Ajustes (o ENABLE_PENTEST_TOOLS).";
-    else if (!s.scope_configured) msg = "Sin alcance autorizado: defínelo en Ajustes (alcance autorizado).";
+    else if (!s.scope_configured) msg = "Sin alcance autorizado: defínelo abajo, en «Alcance autorizado».";
     else msg = `Activo · modo ${s.execution_mode} · ${s.scope_count} en alcance · ${avail.length}/${s.tools.length} herramientas instaladas`;
     const diag = s.mode_check ? `<div class="muted" style="margin-top:4px">${s.mode_ok ? "✓" : "⚠"} ${escapeHtml(s.mode_check)}</div>` : "";
     el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}${diag}`;
@@ -856,6 +857,20 @@ async function recheckTools() {
   try { const s = await api("/pentest/recheck", { method: "POST" }); renderToolsGrid(s.tools); toast("Herramientas comprobadas.", "ok"); }
   catch (e) { toast(e.message, "err"); }
   finally { el("btn-pt-recheck").disabled = false; }
+}
+
+async function savePtScope() {
+  const scope = el("pt-scope").value.trim();
+  el("btn-pt-scope-save").disabled = true;
+  el("pt-scope-msg").textContent = "Guardando…";
+  try {
+    await api("/settings", { method: "PUT", body: JSON.stringify({ pentest_scope_allowlist: scope }) });
+    const n = scope ? scope.split(",").map((s) => s.trim()).filter(Boolean).length : 0;
+    el("pt-scope-msg").textContent = n ? `✓ Alcance guardado · ${n} objetivo(s) autorizado(s).` : "✓ Alcance vacío: ningún objetivo autorizado.";
+    toast("Alcance autorizado guardado.", "ok");
+    loadPentest();
+  } catch (e) { el("pt-scope-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-pt-scope-save").disabled = false; }
 }
 
 let PT_INSTALL_TIMER = null;
@@ -1005,7 +1020,6 @@ async function loadSettings() {
     el("set-model").innerHTML = opts.map((m) =>
       `<option value="${escapeHtml(m)}"${m === s.default_ollama_model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
     el("set-pentest").checked = s.enable_pentest_tools;
-    el("set-scope").value = s.pentest_scope_allowlist || "";
     el("set-mode").value = s.pentest_execution_mode;
     const distros = s.wsl_distros || [];
     if (s.pentest_wsl_distro && !distros.includes(s.pentest_wsl_distro)) distros.push(s.pentest_wsl_distro);
@@ -1044,7 +1058,6 @@ async function saveSettings() {
   const body = {
     default_ollama_model: el("set-model").value,
     enable_pentest_tools: el("set-pentest").checked,
-    pentest_scope_allowlist: el("set-scope").value.trim(),
     pentest_execution_mode: el("set-mode").value,
     pentest_wsl_distro: el("set-distro").value.trim(),
     pentest_wsl_user: el("set-wsl-user").value.trim(),
@@ -1119,6 +1132,7 @@ document.addEventListener("DOMContentLoaded", () => {
   el("pt-type").addEventListener("change", applyPtType);
   el("btn-pt-recheck").addEventListener("click", recheckTools);
   el("btn-pt-install").addEventListener("click", installTools);
+  el("btn-pt-scope-save").addEventListener("click", savePtScope);
 
   // Ajustes
   el("btn-save-settings").addEventListener("click", saveSettings);

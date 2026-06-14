@@ -353,6 +353,15 @@
           <pre id="pt-install-log" class="pt-output hidden"></pre>
         </div>
 
+        <div class="card">
+          <div class="card-head"><h3>Alcance autorizado <span class="muted">lista blanca de objetivos</span></h3>
+            <button id="btn-pt-scope-save" class="btn ghost sm">💾 Guardar alcance</button>
+          </div>
+          <p class="muted">Solo se permite escanear objetivos incluidos aquí (dominios, IPs o CIDR, separados por comas). Es la barrera que impide escaneos fuera de tu autorización.</p>
+          <textarea id="pt-scope" class="input mono" rows="2" placeholder="mi-dominio.com, 10.0.0.0/24, 192.168.1.50"></textarea>
+          <div id="pt-scope-msg" class="agent-hint"></div>
+        </div>
+
         <div class="split">
           <div class="card form-card">
             <h3>Pentest autorizado (Kali)</h3>
@@ -491,9 +500,7 @@
             <h3>Pentesting (Kali)</h3>
             <label class="check check-warn"><input type="checkbox" id="set-pentest" />
               Activar herramientas de pentest (ejecutan binarios reales)</label>
-
-            <label class="lbl">Alcance autorizado <span class="lbl-dim">(dominios, IPs o CIDR, separados por comas)</span></label>
-            <textarea id="set-scope" class="input mono" rows="2" placeholder="mi-dominio.com, 10.0.0.0/24, 192.168.1.50"></textarea>
+            <div class="agent-hint">El <strong>alcance autorizado</strong> (objetivos permitidos) se configura en la pestaña <strong>Pentesting</strong>.</div>
 
             <div class="form-grid">
               <div>

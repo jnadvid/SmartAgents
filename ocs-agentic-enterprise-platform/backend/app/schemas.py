@@ -525,6 +525,7 @@ class PentestStatusResponse(BaseModel):
     enabled: bool
     scope_configured: bool
     scope_count: int
+    scope_allowlist: str = ""  # alcance autorizado en bruto (editable desde la pestaña Pentesting)
     execution_mode: str = "native"
     wsl_distro: str = "kali-linux"
     mode_ok: bool = True
