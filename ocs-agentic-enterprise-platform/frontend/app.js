@@ -4,6 +4,7 @@
 const API = "";
 let AGENTS = [];
 let SQUADS = [];
+let CONNECTORS = [];
 let LAST_EXECUTION_ID = null;
 
 // --------------------------------------------------------------------------
@@ -245,6 +246,7 @@ async function loadAgentsView() {
           <button class="btn ghost xs" data-use-agent="${escapeHtml(a.name)}">Usar</button></div>
           <p>${escapeHtml(a.description)}</p>
           <div class="agent-tools">${(a.allowed_tools || []).map((t) => `<span class="tool-chip">${escapeHtml(t)}</span>`).join("") || '<span class="muted">sin herramientas</span>'}</div>
+          ${(a.data_access && a.data_access.length) ? `<div class="agent-access" title="Acceso de lectura de datos">🔌 ${a.data_access.map((d) => `<span class="access-chip">${escapeHtml(d)}</span>`).join("")}</div>` : ""}
         </div>`).join("")}</div></div>`).join("");
   el("agents-by-area").querySelectorAll("[data-use-agent]").forEach((b) =>
     b.addEventListener("click", () => useAgentInAssistant(b.dataset.useAgent)));
@@ -320,6 +322,17 @@ function buildTeamChecklist(containerId) {
 
 function checkedValues(containerId) {
   return [...el(containerId).querySelectorAll("input:checked")].map((i) => i.value);
+}
+
+async function loadConnectors() {
+  try {
+    CONNECTORS = await api("/connectors");
+    const sel = el("sched-connector");
+    if (sel) {
+      sel.innerHTML = '<option value="">(ninguna)</option>' + CONNECTORS.map((c) =>
+        `<option value="${escapeHtml(c.name)}"${c.enabled ? "" : " disabled"}>${escapeHtml(c.display_name)}${c.enabled ? "" : " (desactivado)"}</option>`).join("");
+    }
+  } catch (_) {}
 }
 
 async function loadTools() {
@@ -553,6 +566,14 @@ function applySchedKind() {
    ["weekly", "sched-weekly-wrap"], ["cron", "sched-cron-wrap"]].forEach(([k, id]) =>
     el(id).classList.toggle("hidden", kind !== k));
 }
+function applySchedConnector() {
+  const c = el("sched-connector").value;
+  el("sched-connector-params-wrap").classList.toggle("hidden", !c);
+  const info = CONNECTORS.find((x) => x.name === c);
+  el("sched-connector-hint").textContent = info
+    ? `${info.description} · El objetivo debe ser un agente/equipo con acceso a este conector.`
+    : "";
+}
 
 async function loadScheduler() {
   await loadSchedulerStatus();
@@ -583,8 +604,9 @@ async function loadScheduledTasks() {
       const toggle = t.enabled
         ? `<button class="btn ghost xs" data-sched-pause="${t.id}">⏸</button>`
         : `<button class="btn ghost xs" data-sched-resume="${t.id}">▶</button>`;
+      const conn = t.connector ? ` <span class="badge accent">🔌 ${escapeHtml(t.connector)}</span>` : "";
       return `<tr><td><strong>${escapeHtml(t.name)}</strong><div class="doc-meta">#${t.id}</div></td>
-        <td>${target}</td><td>${escapeHtml(t.schedule_human)}</td>
+        <td>${target}</td><td>${escapeHtml(t.schedule_human)}${conn}</td>
         <td>${escapeHtml(next)}</td><td>${schedBadge(t.status)}${t.last_status ? ` <span class="badge">${escapeHtml(t.last_status)}</span>` : ""}</td>
         <td>${t.run_count}</td>
         <td class="sched-actions">${toggle}
@@ -671,6 +693,16 @@ async function createScheduledTask() {
   else if (kind === "weekly") { payload.day_of_week = parseInt(el("sched-weekday").value, 10); payload.time_of_day = el("sched-weekly-time").value; }
   else if (kind === "cron") payload.cron = el("sched-cron").value.trim();
 
+  const connector = el("sched-connector").value;
+  if (connector) {
+    payload.connector = connector;
+    const raw = el("sched-connector-params").value.trim();
+    if (raw) {
+      try { payload.connector_params = JSON.parse(raw); }
+      catch (_) { return toast("Parámetros del conector: JSON inválido.", "err"); }
+    }
+  }
+
   el("btn-create-sched").disabled = true;
   try {
     await api("/scheduler/tasks", { method: "POST", body: JSON.stringify(payload) });
@@ -707,9 +739,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Programador
   el("sched-target-kind").addEventListener("change", applySchedTarget);
   el("sched-kind").addEventListener("change", applySchedKind);
+  el("sched-connector").addEventListener("change", applySchedConnector);
   el("btn-create-sched").addEventListener("click", createScheduledTask);
   el("btn-refresh-sched").addEventListener("click", loadScheduler);
-  applySchedTarget(); applySchedKind();
+  applySchedTarget(); applySchedKind(); applySchedConnector();
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);
@@ -730,6 +763,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => switchView(b.dataset.goto)));
 
-  loadHealth(); loadMetrics(); loadAgents(); loadSquads(); loadModels(); loadTools();
+  loadHealth(); loadMetrics(); loadAgents(); loadSquads(); loadConnectors(); loadModels(); loadTools();
   setInterval(loadHealth, 30000);
 });

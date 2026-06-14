@@ -237,6 +237,14 @@
               <div id="sched-team-agents" class="checklist"></div>
             </div>
 
+            <label class="lbl">Fuente de datos <span class="lbl-dim">(conector, opcional)</span></label>
+            <select id="sched-connector" class="input"><option value="">(ninguna)</option></select>
+            <div id="sched-connector-params-wrap" class="hidden">
+              <label class="lbl-dim">Parámetros del conector (JSON)</label>
+              <textarea id="sched-connector-params" class="input mono" rows="2" placeholder='{"min_level": 7, "limit": 50}'></textarea>
+              <div class="agent-hint" id="sched-connector-hint"></div>
+            </div>
+
             <label class="lbl">Periodicidad</label>
             <select id="sched-kind" class="input">
               <option value="once">Una vez</option>

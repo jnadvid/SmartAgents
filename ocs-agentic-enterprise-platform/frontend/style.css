@@ -323,3 +323,8 @@ textarea.input { resize: vertical; }
 .sched-actions .btn { margin-left: 2px; }
 .sched-detail { margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
 .sched-detail h4 { margin-bottom: 4px; }
+
+/* ---------- Acceso de datos / conectores ---------- */
+.agent-access { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; align-items: center; }
+.access-chip { font-size: 0.66rem; padding: 2px 7px; border-radius: 6px; background: rgba(91, 140, 255, 0.14); border: 1px solid rgba(91, 140, 255, 0.35); color: #bcd0ff; }
+.input.mono { font-family: "Consolas", "SF Mono", ui-monospace, monospace; font-size: 0.8rem; }
