@@ -387,6 +387,13 @@
               <div class="spinner"></div><p>Ejecutando herramientas y analizando…</p>
               <span class="loading-sub">El escaneo puede tardar varios minutos según el perfil.</span>
             </div>
+            <div id="pt-progress" class="hidden">
+              <div class="pt-prog-head"><strong id="pt-prog-stage">Inicializando…</strong>
+                <span id="pt-prog-pct" class="badge accent">0%</span></div>
+              <div class="pt-prog-bar"><span id="pt-prog-fill" style="--p:0%"></span></div>
+              <div id="pt-prog-sub" class="muted"></div>
+              <div id="pt-prog-timeline" class="pt-timeline"></div>
+            </div>
             <div id="pt-result" class="hidden">
               <div class="result-badges" id="pt-meta"></div>
               <div class="result-actions"><button class="btn ghost sm hidden" id="btn-pt-report">⬇ Informe corporativo (HTML)</button></div>

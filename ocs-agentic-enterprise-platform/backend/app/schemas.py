@@ -580,6 +580,13 @@ class InstallStatusResponse(BaseModel):
     log: str = ""
 
 
+class StepProgressOut(BaseModel):
+    tool: str
+    phase: str
+    status: str
+    duration_ms: int = 0
+
+
 class PentestRunResponse(BaseModel):
     target: str
     host: str
@@ -593,6 +600,24 @@ class PentestRunResponse(BaseModel):
     execution: ExecutionResponse | None = None
     emailed: bool = False
     email_message: str | None = None
+
+
+class PentestProgressResponse(BaseModel):
+    running: bool
+    status: str  # idle | running | completed | error
+    stage: str = ""
+    target: str = ""
+    kind: str = ""
+    total: int = 0
+    done: int = 0
+    percent: int = 0
+    current_tool: str = ""
+    current_phase: str = ""
+    steps: list[StepProgressOut] = []
+    findings_by_severity: dict[str, int] = {}
+    max_severity: str = "info"
+    result: PentestRunResponse | None = None
+    error: str | None = None
 
 
 # ---------------------------------------------------------------------------

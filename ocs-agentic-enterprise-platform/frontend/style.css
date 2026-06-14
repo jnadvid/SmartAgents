@@ -345,3 +345,21 @@ textarea.input { resize: vertical; }
 .tool-pill.ok { color: #bdf0dd; border-color: rgba(45, 212, 167, 0.4); }
 .tool-pill.no { color: var(--text-mute); }
 #pt-install-log { margin-top: 12px; max-height: 320px; }
+
+/* ---------- Progreso del pentest ---------- */
+#pt-progress { padding: 6px 2px; }
+.pt-prog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.pt-prog-head strong { font-size: 0.95rem; }
+.pt-prog-bar { height: 9px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 999px; overflow: hidden; }
+.pt-prog-fill { display: block; height: 100%; width: var(--p, 0%); background: var(--grad); transition: width 0.5s ease; }
+#pt-prog-sub { font-size: 0.78rem; margin: 7px 0 12px; }
+.pt-timeline { display: flex; flex-direction: column; gap: 10px; }
+.tl-phase { border-left: 2px solid var(--border); padding-left: 10px; }
+.tl-phase-name { font-size: 0.74rem; color: var(--text-mute); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.tl-steps { display: flex; flex-wrap: wrap; gap: 5px; }
+.tl-step { font-size: 0.72rem; padding: 3px 9px; border-radius: 7px; border: 1px solid var(--border-soft); background: var(--bg-2); color: var(--text-dim); }
+.tl-step.ok { background: rgba(45,212,167,0.14); border-color: rgba(45,212,167,0.4); color: #bdf0dd; }
+.tl-step.err { background: rgba(246,104,94,0.14); border-color: rgba(246,104,94,0.4); color: #ffc9c4; }
+.tl-step.warn { background: rgba(246,181,69,0.14); border-color: rgba(246,181,69,0.4); color: #ffe3ab; }
+.tl-step.no { opacity: 0.5; }
+.tl-step.run { background: rgba(91,140,255,0.18); border-color: var(--accent); color: #cfe0ff; animation: pulse 1.2s infinite; }

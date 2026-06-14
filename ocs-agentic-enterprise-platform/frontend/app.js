@@ -819,27 +819,61 @@ async function pollInstall() {
   } catch (_) {}
 }
 
+let PT_PROGRESS_TIMER = null;
 async function runPentest() {
   const target = el("pt-target").value.trim();
   if (!target) return toast("Indica un objetivo.", "err");
   if (!el("pt-authorized").checked) return toast("Debes confirmar la autorización.", "err");
   const auto = el("pt-auto").checked;
-  const email = el("pt-email").value.trim() || null;
   const options = el("pt-wordlist").value ? { wordlist: el("pt-wordlist").value } : {};
-  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: email, options };
-  const path = auto ? "/pentest/auto" : "/pentest/run";
+  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: el("pt-email").value.trim() || null, options };
+  const path = auto ? "/pentest/start-auto" : "/pentest/start";
   const body = auto ? { ...common, aggressive: el("pt-aggressive").checked } : { ...common, profile: el("pt-profile").value };
 
   el("pt-empty").classList.add("hidden");
   el("pt-result").classList.add("hidden");
-  el("pt-loading").classList.remove("hidden");
+  el("pt-loading").classList.add("hidden");
+  el("pt-progress").classList.remove("hidden");
+  el("pt-prog-timeline").innerHTML = ""; el("pt-msg").textContent = "";
   el("btn-pentest-run").disabled = true;
-  el("pt-msg").textContent = "";
   try {
-    const r = await api(path, { method: "POST", body: JSON.stringify(body) });
-    renderPentest(r);
-  } catch (e) { el("pt-msg").textContent = `Error: ${e.message}`; toast(e.message, "err"); }
-  finally { el("pt-loading").classList.add("hidden"); el("btn-pentest-run").disabled = false; }
+    renderProgress(await api(path, { method: "POST", body: JSON.stringify(body) }));
+    clearInterval(PT_PROGRESS_TIMER);
+    PT_PROGRESS_TIMER = setInterval(pollPentestProgress, 1300);
+  } catch (e) {
+    el("pt-progress").classList.add("hidden");
+    el("pt-msg").textContent = `Error: ${e.message}`; toast(e.message, "err");
+    el("btn-pentest-run").disabled = false;
+  }
+}
+
+async function pollPentestProgress() {
+  try {
+    const p = await api("/pentest/progress");
+    renderProgress(p);
+    if (!p.running) {
+      clearInterval(PT_PROGRESS_TIMER);
+      el("btn-pentest-run").disabled = false;
+      el("pt-progress").classList.add("hidden");
+      if (p.result) renderPentest(p.result);
+      else if (p.error) { el("pt-msg").textContent = `Error: ${p.error}`; toast(p.error, "err"); }
+    }
+  } catch (_) {}
+}
+
+const STEP_KIND = { running: "run", success: "ok", error: "err", timeout: "warn", unavailable: "no" };
+function renderProgress(p) {
+  el("pt-prog-stage").textContent = p.stage || (p.running ? "Trabajando…" : p.status);
+  el("pt-prog-pct").textContent = p.percent + "%";
+  el("pt-prog-fill").style.setProperty("--p", p.percent + "%");
+  const sev = Object.entries(p.findings_by_severity || {}).filter(([, n]) => n).map(([s, n]) => `${s}: ${n}`).join(" · ");
+  el("pt-prog-sub").textContent = `${p.done}/${p.total} herramientas` + (sev ? ` · hallazgos: ${sev}` : "");
+  const byPhase = {};
+  (p.steps || []).forEach((s) => { (byPhase[s.phase] = byPhase[s.phase] || []).push(s); });
+  el("pt-prog-timeline").innerHTML = Object.entries(byPhase).map(([phase, steps]) =>
+    `<div class="tl-phase"><div class="tl-phase-name">${escapeHtml(phase)}</div>
+      <div class="tl-steps">${steps.map((s) =>
+        `<span class="tl-step ${STEP_KIND[s.status] || ""}" title="${escapeHtml(s.tool)} · ${escapeHtml(s.status)}${s.duration_ms ? ` · ${s.duration_ms}ms` : ""}">${escapeHtml(s.tool)}</span>`).join("")}</div></div>`).join("");
 }
 
 function renderPentest(r) {
