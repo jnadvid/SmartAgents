@@ -56,6 +56,7 @@ Algunos declaran **acceso de lectura** (`data_access`) a conectores para automat
 | `purple_team_lead` | purple_team | wazuh_alerts, local_json | Matriz de cobertura técnica→detección y gaps |
 | `ot_security_analyst` | ot_security | local_json, local_csv | Ciberseguridad industrial (Purdue, IEC 62443), safety-first |
 | `cyberpsychology_analyst` | cyberpsychology | local_json, local_csv | Factor humano, ingeniería social y concienciación (psicología) |
+| `web_pentester` | (manual / `/pentest/run`) | — | Analiza la salida de herramientas de Kali y redacta el informe (ver [`pentest.md`](pentest.md)) |
 
 Squads de seguridad: `soc_investigation_team` (analista → hunter → **jefe de SOC**),
 `purple_team_exercise`, `ot_security_assessment`, `security_awareness_team`.

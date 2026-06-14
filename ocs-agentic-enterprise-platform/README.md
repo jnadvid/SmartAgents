@@ -85,6 +85,8 @@ Una plataforma donde introduces una tarea en lenguaje natural y el sistema:
   matriz de cobertura y gaps de detección; ingeniería de detección (Sigma).
 - **Ciberseguridad industrial (OT/ICS)**: Purdue, IEC 62443, recomendaciones safety-first.
 - **Psicología de la ciberseguridad**: factor humano, ingeniería social y concienciación.
+- **Pentesting autorizado con Kali**: das una web de tu alcance y los agentes lanzan
+  nmap/nikto/nuclei/… y redactan el informe (opt-in, allow-list de objetivos).
 - Análisis de alertas Wazuh/SIEM con normalización y mapeo MITRE ATT&CK heurístico.
 - Triaje de vulnerabilidades (CVSS + criticidad + exposición → prioridad P1-P4 y SLA).
 - Gap analysis simplificado contra ISO 27001 / RGPD.
@@ -115,18 +117,20 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **44 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
-  purple team, SOC y OT—, negocio, RRHH, psicología, compliance, proyectos, datos, etc.).
+- **45 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
+  purple team, SOC, OT y pentester—, negocio, RRHH, psicología, compliance, proyectos, etc.).
 - **12 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
 - **Conectores de datos** (Wazuh, JSON/CSV local, HTTP opt-in) con **acceso de lectura
   definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
 - **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
   ejecutar** (p. ej. el bucle del SOC).
-- **24 herramientas** deterministas: sin Internet, sin comandos del sistema, con validación
-  Pydantic, timeout y log de auditoría. Solo acceden a datos vía la BD local (`backend/data`).
+- **Pentesting con Kali** (opt-in, alcance autorizado): los agentes de ciberseguridad lanzan
+  herramientas reales (nmap, nikto, nuclei…) y analizan los resultados — ver [`docs/pentest.md`](docs/pentest.md).
+- **24 herramientas** deterministas + análisis estático de código: sin Internet, sin comandos
+  del sistema, con validación Pydantic, timeout y log de auditoría.
 - Detalle en [`docs/architecture.md`](docs/architecture.md), [`docs/squads.md`](docs/squads.md),
-  [`docs/scheduler.md`](docs/scheduler.md), [`docs/connectors.md`](docs/connectors.md) y
-  [`docs/use_cases.md`](docs/use_cases.md).
+  [`docs/scheduler.md`](docs/scheduler.md), [`docs/connectors.md`](docs/connectors.md),
+  [`docs/use_cases.md`](docs/use_cases.md) y [`docs/pentest.md`](docs/pentest.md).
 
 ## Requisitos
 
@@ -291,7 +295,9 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET | `/scheduler/status` | Estado del programador |
 | GET | `/connectors`, `/connectors/categories` | Catálogo de conectores de datos |
 | POST | `/connectors/{name}/read` | Vista previa de lectura de una fuente |
+| GET | `/pentest/status` · POST `/pentest/run` | Pentesting con Kali (opt-in, autorizado) |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
+| DELETE | `/executions/{id}` · `/executions?status=failed` | Borrar una ejecución o limpiar por estado |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
 | POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local (keyword/semantic/hybrid) |
 | POST | `/documents/reindex-embeddings` | Regenerar embeddings (RAG semántico) |
@@ -321,8 +327,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 127 tests: provider mockeado, clasificador, router, tools, motor,
-                # Chain-of-Work, RAG, métricas, exportación, squads, scheduler y conectores
+pytest          # 136 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, RAG, métricas, squads, scheduler, conectores y pentest
 ```
 
 ## Seguridad
@@ -359,20 +365,21 @@ ocs-agentic-enterprise-platform/
   backend/
     app/
       main.py · config.py · database.py · models.py · schemas.py
-      agents/         # BaseAgent + 44 agentes + squads + registro
+      agents/         # BaseAgent + 45 agentes + squads + registro
       orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
       connectors/     # conectores de datos (Wazuh, JSON/CSV, HTTP opt-in) + registro
+      pentest/        # herramientas de Kali (scope, base sin-shell, registro, servicio)
       llm/            # contrato LLM + OllamaProvider + ModelRouter
       tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
       scheduler/      # cálculo de fechas (cron/diaria/…) + hilo del programador
       audit/          # Chain-of-Work
       rag/            # loader, chunker, retriever, embeddings (RAG semántico)
-      api/            # routers FastAPI (scheduler, conectores, métricas, exportación…)
+      api/            # routers FastAPI (scheduler, conectores, pentest, métricas…)
       security/       # auth, políticas, sanitización
       services/       # fachadas: agent_runner, scheduler, documentos, ejecuciones, métricas
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 127 tests
+    tests/            # 136 tests
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica

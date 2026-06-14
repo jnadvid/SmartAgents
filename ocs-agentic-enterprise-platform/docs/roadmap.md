@@ -16,6 +16,9 @@ dashboard de métricas, exportación de informes, gestor `.bat`, 127 tests).
 - [x] **Conectores de datos** (Wazuh, JSON/CSV, HTTP opt-in) con **acceso de lectura por
       agente** (`data_access`) y lectura automática desde el programador, p. ej. el **bucle
       del SOC** (ver [`connectors.md`](connectors.md) y [`use_cases.md`](use_cases.md)).
+- [x] **Pentesting con Kali** (opt-in, alcance autorizado, sin shell): los agentes de
+      ciberseguridad lanzan nmap/nikto/nuclei/… sobre objetivos autorizados y redactan el
+      informe (ver [`pentest.md`](pentest.md)). Borrado de ejecuciones en API y UI.
 
 ## Completado en la Fase 2
 
