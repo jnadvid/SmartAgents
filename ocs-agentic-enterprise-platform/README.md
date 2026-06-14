@@ -125,7 +125,10 @@ AgentRunner ──► ExecutionEngine
 - **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
   ejecutar** (p. ej. el bucle del SOC).
 - **Pentesting con Kali** (opt-in, alcance autorizado): los agentes de ciberseguridad lanzan
-  herramientas reales (nmap, nikto, nuclei…) y analizan los resultados — ver [`docs/pentest.md`](docs/pentest.md).
+  herramientas reales (nmap, nikto, nuclei…) en **modo nativo o WSL (Windows + Kali)** y
+  analizan los resultados — ver [`docs/pentest.md`](docs/pentest.md).
+- **Ajustes desde la web**: modelo Ollama por defecto, activar pentest, alcance autorizado y
+  entorno de ejecución (nativo/WSL), persistidos en la BD (pestaña **Ajustes**).
 - **24 herramientas** deterministas + análisis estático de código: sin Internet, sin comandos
   del sistema, con validación Pydantic, timeout y log de auditoría.
 - Detalle en [`docs/architecture.md`](docs/architecture.md), [`docs/squads.md`](docs/squads.md),
@@ -296,6 +299,7 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET | `/connectors`, `/connectors/categories` | Catálogo de conectores de datos |
 | POST | `/connectors/{name}/read` | Vista previa de lectura de una fuente |
 | GET | `/pentest/status` · POST `/pentest/run` | Pentesting con Kali (opt-in, autorizado) |
+| GET/PUT | `/settings` | Ajustes editables: modelo por defecto, pentest, modo nativo/WSL |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
 | DELETE | `/executions/{id}` · `/executions?status=failed` | Borrar una ejecución o limpiar por estado |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
@@ -327,8 +331,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 136 tests: provider mockeado, clasificador, router, tools, motor,
-                # Chain-of-Work, RAG, métricas, squads, scheduler, conectores y pentest
+pytest          # 140 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, RAG, squads, scheduler, conectores, pentest y ajustes
 ```
 
 ## Seguridad
@@ -377,9 +381,11 @@ ocs-agentic-enterprise-platform/
       api/            # routers FastAPI (scheduler, conectores, pentest, métricas…)
       security/       # auth, políticas, sanitización
       services/       # fachadas: agent_runner, scheduler, documentos, ejecuciones, métricas
+    runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 136 tests
+    tests/            # 140 tests
+  scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica
