@@ -372,3 +372,16 @@ textarea.input { resize: vertical; }
 .report-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
 .report-head strong { flex: 1; font-size: 0.9rem; }
 .report-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+
+/* ---------- Subdominios (OSINT) ---------- */
+#sd-filter { margin: 10px 0; }
+.sd-table { display: flex; flex-direction: column; gap: 4px; max-height: 56vh; overflow-y: auto; }
+.sd-row { display: grid; grid-template-columns: minmax(180px, 1.6fr) 1.4fr auto; gap: 10px; align-items: center;
+  padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--bg-2); }
+.sd-name { font-size: 0.82rem; color: var(--text); word-break: break-all; }
+.sd-src { display: flex; flex-wrap: wrap; gap: 4px; }
+.src-chip { font-size: 0.68rem; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border-soft);
+  background: var(--bg-1); color: var(--text-mute); }
+.sd-dns { text-align: right; white-space: nowrap; }
+.badge.ok-badge { border-color: var(--ok); color: #7ef0d2; }
+.badge.dim-badge { opacity: 0.55; }

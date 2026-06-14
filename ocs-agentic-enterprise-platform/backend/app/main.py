@@ -25,6 +25,7 @@ from app.api import (
     pentest,
     scheduler,
     settings as settings_api,
+    subdomains,
     tools,
 )
 from app.config import get_settings, setup_logging
@@ -117,6 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(scheduler.router)
     app.include_router(connectors.router)
     app.include_router(pentest.router)
+    app.include_router(subdomains.router)
     app.include_router(settings_api.router)
 
     # Frontend estático servido en la raíz (después de las rutas de la API).

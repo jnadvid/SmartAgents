@@ -646,3 +646,52 @@ class ToolCategoriesResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+# ---------------------------------------------------------------------------
+# Subdominios (OSINT)
+# ---------------------------------------------------------------------------
+
+
+class SubdomainItem(BaseModel):
+    name: str
+    sources: list[str] = []
+    resolved: bool | None = None
+    ip: str | None = None
+
+
+class SubdomainSourceInfo(BaseModel):
+    source: str
+    count: int
+    ok: bool
+    detail: str = ""
+
+
+class SubdomainEnumerateRequest(BaseModel):
+    domain: str = Field(min_length=1, max_length=253, description="Dominio raíz (sin esquema)")
+    use_tools: bool = Field(default=True, description="Usar herramientas de Kali si están instaladas")
+    use_amass: bool = Field(default=False, description="Incluir amass pasivo (más lento)")
+    resolve: bool = Field(default=False, description="Resolver por DNS qué subdominios están vivos")
+
+
+class SubdomainScanResponse(BaseModel):
+    domain: str
+    total: int
+    sources: list[SubdomainSourceInfo] = []
+    subdomains: list[SubdomainItem] = []
+
+
+class SubdomainToolInfo(BaseModel):
+    name: str
+    available: bool
+
+
+class SubdomainStatusResponse(BaseModel):
+    execution_mode: str
+    pentest_enabled: bool
+    tools: list[SubdomainToolInfo] = []
+
+
+class SubdomainResolveRequest(BaseModel):
+    domain: str = Field(min_length=1, max_length=253)
+    names: list[str] = Field(default_factory=list, max_length=5000)

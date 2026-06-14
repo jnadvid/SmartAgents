@@ -19,6 +19,7 @@ const ICONS = {
   agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 14c2.5 0 5 1.6 5 4.5"/></svg>',
   scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
   pentest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  subdomains: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.06-.33.1-.66.1-1z"/></svg>',
   reports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
 };
@@ -31,6 +32,7 @@ const VIEWS = [
   { id: "reports", label: "Informes", sub: "Informes completos: descarga y borrado" },
   { id: "scheduler", label: "Programador", sub: "Tareas puntuales y periódicas" },
   { id: "pentest", label: "Pentest", sub: "Escaneo autorizado con Kali" },
+  { id: "subdomains", label: "Subdominios", sub: "Descubre todos los subdominios de un dominio" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
   { id: "tools", label: "Herramientas", sub: "Catálogo de herramientas locales" },
   { id: "settings", label: "Ajustes", sub: "Modelo, pentest y entorno de ejecución" },
@@ -150,6 +152,7 @@ function switchView(id) {
   if (id === "reports") loadReports();
   if (id === "scheduler") loadScheduler();
   if (id === "pentest") loadPentest();
+  if (id === "subdomains") loadSubdomains();
   if (id === "settings") loadSettings();
   if (id === "documents") loadDocuments();
 }
@@ -606,6 +609,137 @@ async function reindexEmbeddings() {
     el("upload-status").textContent = `✓ ${b.message}`; toast("Embeddings regenerados.", "ok");
   } catch (e) { el("upload-status").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
   finally { el("btn-reindex").disabled = false; }
+}
+
+// --------------------------------------------------------------------------
+// Subdominios (OSINT)
+// --------------------------------------------------------------------------
+const SD_MAP = new Map();   // nombre -> {sources:Set, resolved:bool|null, ip:string|null}
+let SD_DOMAIN = "";
+
+async function loadSubdomains() {
+  try {
+    const s = await api("/subdomains/status");
+    const avail = s.tools.filter((t) => t.available).map((t) => t.name);
+    const toolsTxt = s.pentest_enabled
+      ? (avail.length ? `herramientas: ${avail.join(", ")}` : "sin herramientas instaladas (solo crt.sh y documentos)")
+      : "pentest desactivado (solo crt.sh y documentos)";
+    el("sd-status").innerHTML = `<span class="status-dot ${avail.length ? "up" : "down"}"></span> Modo ${escapeHtml(s.execution_mode)} · ${escapeHtml(toolsTxt)}`;
+  } catch (e) { el("sd-status").textContent = ""; }
+}
+
+function sdMergeItems(items) {
+  for (const it of items) {
+    let cur = SD_MAP.get(it.name);
+    if (!cur) { cur = { sources: new Set(), resolved: null, ip: null }; SD_MAP.set(it.name, cur); }
+    (it.sources || []).forEach((s) => cur.sources.add(s));
+    if (it.resolved !== null && it.resolved !== undefined) { cur.resolved = it.resolved; cur.ip = it.ip; }
+  }
+}
+
+async function sdSearch() {
+  const domain = el("sd-domain").value.trim();
+  if (!domain) return toast("Indica un dominio.", "err");
+  SD_DOMAIN = domain;
+  el("btn-sd-search").disabled = true;
+  el("sd-loading").classList.remove("hidden");
+  el("sd-msg").textContent = "Consultando crt.sh y herramientas…";
+  try {
+    const r = await api("/subdomains/enumerate", { method: "POST", body: JSON.stringify({
+      domain, use_tools: el("sd-use-tools").checked, use_amass: el("sd-use-amass").checked, resolve: false }) });
+    sdMergeItems(r.subdomains);
+    el("sd-msg").textContent = `✓ ${r.total} subdominio(s) · ${r.sources.map((s) => `${s.source}: ${s.count}`).join(" · ") || "sin resultados"}`;
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-search").disabled = false; el("sd-loading").classList.add("hidden"); }
+}
+
+async function sdExtract() {
+  const domain = el("sd-domain").value.trim();
+  if (!domain) return toast("Indica un dominio (para reconocer sus subdominios).", "err");
+  const input = el("sd-files");
+  if (!input.files.length) return toast("Selecciona uno o más documentos.", "err");
+  SD_DOMAIN = domain;
+  const fd = new FormData();
+  fd.append("domain", domain);
+  for (const f of input.files) fd.append("files", f);
+  el("btn-sd-extract").disabled = true;
+  el("sd-msg").textContent = "Analizando documentos…";
+  try {
+    const res = await fetch("/subdomains/extract", { method: "POST", body: fd });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || `HTTP ${res.status}`); }
+    const r = await res.json();
+    sdMergeItems(r.subdomains);
+    el("sd-msg").textContent = `✓ ${r.total} subdominio(s) en ${input.files.length} documento(s).`;
+    input.value = "";
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-extract").disabled = false; }
+}
+
+async function sdResolve() {
+  if (!SD_MAP.size) return toast("No hay subdominios que resolver.", "err");
+  const names = [...SD_MAP.keys()];
+  el("btn-sd-resolve").disabled = true;
+  el("sd-msg").textContent = `Resolviendo ${names.length} subdominio(s) por DNS…`;
+  try {
+    const r = await api("/subdomains/resolve", { method: "POST", body: JSON.stringify({ domain: SD_DOMAIN || (names[0].split(".").slice(-2).join(".")), names }) });
+    sdMergeItems(r.subdomains);
+    const live = r.subdomains.filter((s) => s.resolved).length;
+    el("sd-msg").textContent = `✓ ${live}/${r.total} resuelven (tienen IP).`;
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-resolve").disabled = false; }
+}
+
+function sdSortedNames() {
+  return [...SD_MAP.keys()].sort((a, b) =>
+    a.split(".").reverse().join(".").localeCompare(b.split(".").reverse().join(".")));
+}
+
+function sdRender() {
+  const filter = (el("sd-filter").value || "").trim().toLowerCase();
+  const names = sdSortedNames().filter((n) => !filter || n.includes(filter));
+  el("sd-count").textContent = `· ${SD_MAP.size}` + (filter ? ` (${names.length} filtrados)` : "");
+  el("sd-empty").classList.toggle("hidden", SD_MAP.size > 0);
+  // Leyenda de fuentes
+  const srcCount = {};
+  for (const v of SD_MAP.values()) v.sources.forEach((s) => { srcCount[s] = (srcCount[s] || 0) + 1; });
+  el("sd-sources").innerHTML = Object.entries(srcCount).sort()
+    .map(([s, c]) => `<span class="badge">${escapeHtml(s)} · ${c}</span>`).join("");
+  el("sd-table").innerHTML = names.map((n) => {
+    const v = SD_MAP.get(n);
+    const chips = [...v.sources].sort().map((s) => `<span class="src-chip">${escapeHtml(s)}</span>`).join("");
+    let dns = "";
+    if (v.resolved === true) dns = `<span class="badge ok-badge">${escapeHtml(v.ip)}</span>`;
+    else if (v.resolved === false) dns = `<span class="badge dim-badge">no resuelve</span>`;
+    return `<div class="sd-row"><code class="sd-name">${escapeHtml(n)}</code><span class="sd-src">${chips}</span><span class="sd-dns">${dns}</span></div>`;
+  }).join("");
+}
+
+function sdExport(fmt) {
+  if (!SD_MAP.size) return toast("No hay nada que exportar.", "err");
+  const names = sdSortedNames();
+  let content, mime, ext;
+  if (fmt === "csv") {
+    content = "subdominio,fuentes,resuelve,ip\n" + names.map((n) => {
+      const v = SD_MAP.get(n);
+      return `${n},"${[...v.sources].join("; ")}",${v.resolved === null ? "" : v.resolved},${v.ip || ""}`;
+    }).join("\n");
+    mime = "text/csv"; ext = "csv";
+  } else {
+    content = names.join("\n"); mime = "text/plain"; ext = "txt";
+  }
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `subdominios-${SD_DOMAIN || "dominio"}.${ext}`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function sdClear() {
+  if (SD_MAP.size && !confirm("¿Vaciar la lista de subdominios?")) return;
+  SD_MAP.clear(); el("sd-msg").textContent = ""; sdRender();
 }
 
 async function loadDocuments() {
@@ -1133,6 +1267,16 @@ document.addEventListener("DOMContentLoaded", () => {
   el("btn-pt-recheck").addEventListener("click", recheckTools);
   el("btn-pt-install").addEventListener("click", installTools);
   el("btn-pt-scope-save").addEventListener("click", savePtScope);
+
+  // Subdominios
+  el("btn-sd-search").addEventListener("click", sdSearch);
+  el("btn-sd-extract").addEventListener("click", sdExtract);
+  el("btn-sd-resolve").addEventListener("click", sdResolve);
+  el("btn-sd-txt").addEventListener("click", () => sdExport("txt"));
+  el("btn-sd-csv").addEventListener("click", () => sdExport("csv"));
+  el("btn-sd-clear").addEventListener("click", sdClear);
+  el("sd-filter").addEventListener("input", sdRender);
+  el("sd-domain").addEventListener("keydown", (e) => { if (e.key === "Enter") sdSearch(); });
 
   // Ajustes
   el("btn-save-settings").addEventListener("click", saveSettings);

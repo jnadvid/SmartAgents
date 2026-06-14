@@ -23,7 +23,7 @@
       <div class="sidebar-foot">
         <div class="status-line" id="status-api"><span class="dot"></span><span class="status-label">API</span><span class="status-val">…</span></div>
         <div class="status-line" id="status-ollama"><span class="dot"></span><span class="status-label">Ollama</span><span class="status-val">…</span></div>
-        <div class="version">v0.12 · Fase 3 · 100% local</div>
+        <div class="version">v0.13 · Fase 3 · 100% local</div>
       </div>
     </aside>
 
@@ -434,6 +434,49 @@
               <h4 class="mt">Informe del agente</h4>
               <div class="result-output markdown" id="pt-report"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SUBDOMINIOS ===== -->
+      <section class="view" id="view-subdomains">
+        <div id="sd-status" class="sched-banner"></div>
+
+        <div class="split">
+          <div class="card form-card">
+            <h3>Buscar subdominios</h3>
+            <p class="muted">OSINT pasivo: Certificate Transparency (crt.sh) + herramientas de Kali si están activas (subfinder, assetfinder, findomain, amass). No es intrusivo.</p>
+            <label class="lbl">Dominio</label>
+            <input id="sd-domain" class="input" placeholder="mi-dominio.com" />
+            <label class="check"><input type="checkbox" id="sd-use-tools" checked /> Usar herramientas de Kali (si están activas)</label>
+            <label class="check"><input type="checkbox" id="sd-use-amass" /> Incluir <strong>amass</strong> pasivo (más lento)</label>
+            <div class="btn-row"><button id="btn-sd-search" class="btn primary">🔎 Buscar subdominios</button></div>
+
+            <h3 class="mt">Desde documentos</h3>
+            <p class="muted">Sube informes, listados o salidas de herramientas (TXT, CSV, JSON, PDF…). Se extraen los subdominios del dominio indicado y se añaden a la lista.</p>
+            <input id="sd-files" class="input" type="file" multiple />
+            <div class="btn-row"><button id="btn-sd-extract" class="btn ghost">📄 Extraer de documentos</button></div>
+            <div id="sd-msg" class="muted"></div>
+          </div>
+
+          <div class="card result-card">
+            <div class="card-head">
+              <h3>Subdominios <span class="muted" id="sd-count">· 0</span></h3>
+              <div>
+                <button id="btn-sd-resolve" class="btn ghost sm">🌐 Resolver DNS</button>
+                <button id="btn-sd-txt" class="btn ghost sm">⬇ TXT</button>
+                <button id="btn-sd-csv" class="btn ghost sm">⬇ CSV</button>
+                <button id="btn-sd-clear" class="btn ghost sm">🗑 Limpiar</button>
+              </div>
+            </div>
+            <div id="sd-sources" class="result-badges"></div>
+            <input id="sd-filter" class="input" placeholder="Filtrar subdominios…" />
+            <div id="sd-empty" class="empty">
+              <div class="empty-icon">🛰️</div>
+              <p>Busca un dominio y/o sube documentos para construir la lista completa de subdominios.</p>
+            </div>
+            <div id="sd-loading" class="loading hidden"><div class="spinner"></div><p>Consultando fuentes…</p></div>
+            <div id="sd-table" class="sd-table"></div>
           </div>
         </div>
       </section>
