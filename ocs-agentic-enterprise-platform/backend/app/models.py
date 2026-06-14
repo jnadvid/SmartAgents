@@ -26,6 +26,20 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class AppSetting(Base):
+    """Ajuste editable en runtime (clave/valor JSON). Sobrescribe el valor del .env.
+
+    Tabla nueva: `create_all` la añade sin migración. Solo se persisten aquí las
+    claves de la allow-list de `runtime_config` (modelo por defecto, pentest, etc.).
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")  # JSON
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class Agent(Base):
     """Espejo persistente del registro de agentes (para auditoría y gestión)."""
 
@@ -161,6 +175,75 @@ class ChunkEmbedding(Base):
     dim: Mapped[int] = mapped_column(Integer, default=0)
     vector: Mapped[str] = mapped_column(Text)  # JSON: lista de floats
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ScheduledTask(Base):
+    """Tarea programada: se ejecuta de forma puntual o periódica.
+
+    El objetivo puede ser un agente concreto, un equipo (squad predefinido o
+    ad-hoc por lista de agentes) o el modo automático (lo decide el router).
+    Tabla nueva: `create_all` la añade sin necesidad de migración.
+    """
+
+    __tablename__ = "scheduled_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    task: Mapped[str] = mapped_column(Text)
+    extra_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    use_documents: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Objetivo: auto | agent | squad | team
+    target_kind: Mapped[str] = mapped_column(String(20), default="auto")
+    target_ref: Mapped[str] = mapped_column(String(200), default="")
+    agent_names: Mapped[str] = mapped_column(Text, default="[]")  # JSON list (team ad-hoc)
+
+    # Fuente de datos opcional (conector) leída antes de ejecutar
+    connector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    connector_params: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+
+    # Programación: once | interval | daily | weekly | cron
+    schedule_kind: Mapped[str] = mapped_column(String(20), default="once")
+    run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    interval_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    time_of_day: Mapped[str | None] = mapped_column(String(5), nullable=True)  # HH:MM
+    day_of_week: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 0=lunes
+    cron: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+
+    # Estado
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="scheduled", index=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    last_execution_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    run_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    runs: Mapped[list["ScheduledRun"]] = relationship(
+        back_populates="scheduled_task", cascade="all, delete-orphan", order_by="ScheduledRun.id.desc()"
+    )
+
+
+class ScheduledRun(Base):
+    """Registro histórico de una activación de una tarea programada."""
+
+    __tablename__ = "scheduled_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scheduled_task_id: Mapped[int] = mapped_column(
+        ForeignKey("scheduled_tasks.id", ondelete="CASCADE"), index=True
+    )
+    execution_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="completed", index=True)
+    message: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    scheduled_task: Mapped[ScheduledTask] = relationship(back_populates="runs")
 
 
 class TaskRoute(Base):

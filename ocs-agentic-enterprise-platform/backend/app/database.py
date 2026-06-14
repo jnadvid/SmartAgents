@@ -63,6 +63,7 @@ def init_db() -> None:
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.documents_dir.mkdir(parents=True, exist_ok=True)
+    (settings.connectors_dir / "wazuh").mkdir(parents=True, exist_ok=True)
 
     # Importa los modelos para registrar las tablas en la metadata.
     from app import models  # noqa: F401

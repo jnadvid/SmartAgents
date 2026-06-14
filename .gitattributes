@@ -1,0 +1,4 @@
+# Fuerza finales de línea LF en scripts de shell para que funcionen al
+# ejecutarse dentro de WSL/Linux aunque el repo se clone en Windows.
+*.sh text eol=lf
+provision-kali.sh text eol=lf

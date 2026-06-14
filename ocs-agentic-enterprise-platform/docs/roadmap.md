@@ -1,8 +1,24 @@
 # Roadmap
 
-Estado actual: **Fase 2** (16 agentes, 19 herramientas, orquestación completa,
-Chain-of-Work, RAG híbrido con embeddings, dashboard de métricas, exportación de
-informes, gestor `.bat` para Windows, 88 tests).
+Estado actual: **Fase 3** (44 agentes por áreas, 24 herramientas, equipos multi-agente,
+programador de tareas, conectores de datos con acceso por agente, Chain-of-Work, RAG híbrido,
+dashboard de métricas, exportación de informes, gestor `.bat`, 127 tests).
+
+## Completado en la Fase 3
+
+- [x] **44 agentes especializados** por áreas (programación, ciberseguridad —blue/red/purple
+      team, SOC, OT—, psicología —incl. de la ciberseguridad—, negocio, RRHH, compliance…)
+      y 5 herramientas de análisis estático de código deterministas.
+- [x] **Equipos (squads) multi-agente** en cadena, predefinidos y ad-hoc, en una única
+      ejecución auditable (ver [`squads.md`](squads.md)).
+- [x] **Programador de tareas** local puntual/periódico (once/interval/daily/weekly/cron)
+      con zona horaria (ver [`scheduler.md`](scheduler.md)).
+- [x] **Conectores de datos** (Wazuh, JSON/CSV, HTTP opt-in) con **acceso de lectura por
+      agente** (`data_access`) y lectura automática desde el programador, p. ej. el **bucle
+      del SOC** (ver [`connectors.md`](connectors.md) y [`use_cases.md`](use_cases.md)).
+- [x] **Pentesting con Kali** (opt-in, alcance autorizado, sin shell): los agentes de
+      ciberseguridad lanzan nmap/nikto/nuclei/… sobre objetivos autorizados y redactan el
+      informe (ver [`pentest.md`](pentest.md)). Borrado de ejecuciones en API y UI.
 
 ## Completado en la Fase 2
 

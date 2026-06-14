@@ -4,8 +4,29 @@ Plataforma **local** de agentes de IA multifuncionales, **auditables y extensibl
 tareas empresariales. Sin Docker, sin PostgreSQL, sin Redis y sin dependencias cloud:
 solo **Python 3.11+, FastAPI, SQLite y Ollama**.
 
-> Las respuestas de los agentes son orientativas. Los agentes legal, financiero y de
-> compliance **no sustituyen asesoría profesional** y lo declaran en cada respuesta.
+> Las respuestas de los agentes son orientativas. Los agentes legal, financiero, de
+> compliance, protección de datos y bienestar **no sustituyen asesoría profesional**
+> (jurídica, financiera o clínica) y lo declaran en cada respuesta.
+
+## Novedades de la Fase 3
+
+- 🧑‍💼 **36 agentes especializados divididos por áreas**: Programación (8), Ciberseguridad (6),
+  Negocio (3), RRHH (3), Psicología (3), Compliance (2), Proyectos (2), además de datos,
+  documentos, ventas, finanzas, legal, investigación, soporte e informes.
+- 💻 **Área de Programación** con herramientas deterministas de **análisis estático de código**
+  (estructura, calidad, SAST/CWE, esqueletos de test, TODOs) — los agentes *interactúan* con
+  el código que pegas **sin ejecutarlo nunca**.
+- 👥 **Equipos (squads) multi-agente**: varios agentes colaboran **en cadena** sobre una misma
+  tarea (p. ej. *arquitecto → backend → frontend → revisor → QA*). Equipos predefinidos o
+  ad-hoc, todo en **una única ejecución auditable**.
+- ⏰ **Programador de tareas**: lanza tareas a un agente, un equipo o en modo auto de forma
+  **puntual o periódica** (una vez, cada X minutos, diaria, semanal o **cron**), con zona
+  horaria. Hilo local en proceso, sin Celery ni cron del sistema.
+- 🛡️ **Equipos de seguridad** (blue/red/purple team, SOC, ciberseguridad industrial OT) y
+  **psicología de la ciberseguridad**, con **conectores de datos** (Wazuh, JSON/CSV) y
+  **acceso de lectura definido por agente** para automatizar, p. ej., el **bucle del SOC**
+  (leer Wazuh → investigar → el jefe de SOC decide derivación y conclusión). Ver
+  [`docs/use_cases.md`](docs/use_cases.md).
 
 ## Novedades de la Fase 2
 
@@ -42,8 +63,30 @@ Una plataforma donde introduces una tarea en lenguaje natural y el sistema:
 - Revisión orientativa de contratos, análisis financiero básico.
 - Respuestas a clientes, planes de formación, informes ejecutivos.
 
+### Casos de uso de programación
+
+- Diseño de arquitectura (ADR, trade-offs), implementación backend/frontend.
+- Revisión de código (calidad, complejidad), generación de tests y documentación técnica.
+- Diseño de esquemas de BD y revisión de SQL; CI/CD e infraestructura como código.
+- Equipo de desarrollo completo en cadena (arquitecto → dev → revisor → QA).
+
+### Casos de uso de psicología y personas
+
+- Psicología organizacional (clima, motivación, gestión del cambio).
+- Psicología de UX (carga cognitiva, persuasión ética, accesibilidad cognitiva).
+- Bienestar laboral y prevención del burnout (orientación general, no clínica).
+- Selección de talento y People Ops (desempeño, políticas, retención).
+
 ### Casos de uso de ciberseguridad
 
+- **Bucle del SOC automatizado**: leer alertas de Wazuh cada X → Blue Team investiga →
+  threat hunter caza → el **jefe de SOC** decide derivación y conclusión (squad + scheduler).
+- Blue / Red / Purple Team: investigación, emulación de adversario autorizada (sin payloads),
+  matriz de cobertura y gaps de detección; ingeniería de detección (Sigma).
+- **Ciberseguridad industrial (OT/ICS)**: Purdue, IEC 62443, recomendaciones safety-first.
+- **Psicología de la ciberseguridad**: factor humano, ingeniería social y concienciación.
+- **Pentesting autorizado con Kali**: das una web de tu alcance y los agentes lanzan
+  nmap/nikto/nuclei/… y redactan el informe (opt-in, allow-list de objetivos).
 - Análisis de alertas Wazuh/SIEM con normalización y mapeo MITRE ATT&CK heurístico.
 - Triaje de vulnerabilidades (CVSS + criticidad + exposición → prioridad P1-P4 y SLA).
 - Gap analysis simplificado contra ISO 27001 / RGPD.
@@ -74,10 +117,25 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **16 agentes**: 11 empresariales + 5 especializados (ciberseguridad/compliance/seguridad de prompts).
-- **19 herramientas** deterministas: sin Internet, sin comandos del sistema, con validación
-  Pydantic, timeout y log de auditoría. Solo acceden a datos vía la BD local (`backend/data`).
-- Detalle completo en [`docs/architecture.md`](docs/architecture.md).
+- **49 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
+  purple team, SOC, OT y pentesters de web/red/AD/API—, negocio, RRHH, psicología, etc.).
+- **12 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
+- **Conectores de datos** (Wazuh, JSON/CSV local, HTTP opt-in) con **acceso de lectura
+  definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
+- **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
+  ejecutar** (p. ej. el bucle del SOC).
+- **Pentesting con Kali** (opt-in, alcance autorizado): **32 herramientas** (nmap, nuclei,
+  sqlmap, wpscan, amass, enum4linux, dalfox, **Metasploit**…) en **modo nativo o WSL (Windows +
+  Kali)**, con **pentest autónomo ADAPTATIVO (PTES/OWASP)** que decide qué lanzar según los
+  hallazgos, **priorización CVSS automática**, informe por fases y **envío por email** — ver
+  [`docs/pentest.md`](docs/pentest.md).
+- **Ajustes desde la web**: modelo Ollama por defecto, activar pentest, alcance autorizado y
+  entorno de ejecución (nativo/WSL), persistidos en la BD (pestaña **Ajustes**).
+- **24 herramientas** deterministas + análisis estático de código: sin Internet, sin comandos
+  del sistema, con validación Pydantic, timeout y log de auditoría.
+- Detalle en [`docs/architecture.md`](docs/architecture.md), [`docs/squads.md`](docs/squads.md),
+  [`docs/scheduler.md`](docs/scheduler.md), [`docs/connectors.md`](docs/connectors.md),
+  [`docs/use_cases.md`](docs/use_cases.md) y [`docs/pentest.md`](docs/pentest.md).
 
 ## Requisitos
 
@@ -186,6 +244,30 @@ python run_backend.py
 Selecciona modo **Manual**, elige el agente del desplegable (se muestran su descripción y
 herramientas autorizadas) y ejecuta. La intención detectada se registra igualmente como metadato.
 
+### Modo equipo (multi-agente)
+
+En el Asistente, elige el modo **👥 Equipo**. Puedes:
+
+- **Equipo predefinido**: selecciona un *squad* (p. ej. *Equipo de Desarrollo*) y sus agentes
+  trabajan **en cadena**: cada uno recibe la tarea original más el resultado de los anteriores.
+- **Personalizado**: marca los agentes que quieras (2 o más, en orden) y compón tu propio equipo.
+
+El resultado combina el trabajo de todos los agentes en **una única ejecución auditable**, con
+pasos `squad_selection` y `agent_run` en el Chain-of-Work. También por API:
+`POST /agents/squads/execute` con `squad_name` o `agent_names`.
+
+### Programar tareas (puntuales o periódicas)
+
+En la pestaña **Programador** puedes lanzar una tarea a un agente, un equipo o en modo auto:
+
+- **Periodicidad**: una vez (fecha/hora), cada X minutos, diaria, semanal o **cron** (5 campos),
+  con **zona horaria** (p. ej. `Europe/Madrid`).
+- **Gestión**: pausar/reanudar, **ejecutar ahora**, ver el **histórico de ejecuciones** y borrar.
+
+Un hilo local comprueba las tareas vencidas cada `SCHEDULER_POLL_SECONDS` y las ejecuta,
+reprogramando la siguiente. Cada ejecución queda en el histórico normal (con su Chain-of-Work).
+Por API: `POST /scheduler/tasks`. Detalle en [`docs/scheduler.md`](docs/scheduler.md).
+
 ### Consultar el Chain-of-Work
 
 - En el resultado de cada ejecución: panel **Chain-of-Work** (línea temporal numerada).
@@ -207,10 +289,25 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET | `/health`, `/health/ollama` | Estado de la app y de Ollama |
 | GET | `/models` · POST `/models/test` | Modelos disponibles / prueba rápida |
 | GET | `/agents`, `/agents/categories` | Catálogo de agentes |
+| GET | `/agents/squads` | Catálogo de equipos (squads) |
 | POST | `/agents/route` | Clasificar intención (sin ejecutar) |
 | POST | `/agents/execute` | Ejecutar (auto o manual vía `agent_name`) |
 | POST | `/agents/{agent}/execute` | Ejecutar con agente concreto |
+| POST | `/agents/squads/execute` | Ejecutar un equipo (predefinido o ad-hoc) |
+| GET/POST | `/scheduler/tasks` | Listar / crear tareas programadas |
+| GET/PATCH/DELETE | `/scheduler/tasks/{id}` | Ver / editar / borrar una tarea programada |
+| POST | `/scheduler/tasks/{id}/{pause\|resume\|run-now}` | Pausar, reanudar o ejecutar ya |
+| GET | `/scheduler/status` | Estado del programador |
+| GET | `/connectors`, `/connectors/categories` | Catálogo de conectores de datos |
+| POST | `/connectors/{name}/read` | Vista previa de lectura de una fuente |
+| GET | `/pentest/status` · POST `/pentest/run` | Pentesting con Kali (opt-in, autorizado) |
+| POST | `/pentest/auto` | Pentest autónomo por fases (PTES/OWASP) + email opcional |
+| POST | `/pentest/recheck` · `/pentest/tools/install` | Comprobar / instalar herramientas (con log) |
+| GET | `/pentest/report/{id}` | Informe corporativo (HTML con portada y logo) |
+| POST | `/pentest/start` · `/pentest/start-auto` · GET `/pentest/progress` | Pentest async con progreso en vivo |
+| GET/PUT | `/settings` · POST `/settings/test-email` | Ajustes (modelo, pentest, WSL, SMTP) y prueba de email |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
+| DELETE | `/executions/{id}` · `/executions?status=failed` | Borrar una ejecución o limpiar por estado |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
 | POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local (keyword/semantic/hybrid) |
 | POST | `/documents/reindex-embeddings` | Regenerar embeddings (RAG semántico) |
@@ -240,8 +337,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 88 tests: provider mockeado, clasificador, router, tools, motor,
-                # Chain-of-Work, embeddings/RAG semántico, métricas y exportación
+pytest          # 140 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, RAG, squads, scheduler, conectores, pentest y ajustes
 ```
 
 ## Seguridad
@@ -267,8 +364,9 @@ pytest          # 88 tests: provider mockeado, clasificador, router, tools, moto
 
 ## Roadmap
 
-Ver [`docs/roadmap.md`](docs/roadmap.md): RAG vectorial, streaming de tokens, multiusuario,
-exportación de informes, programación de tareas, y más.
+Ver [`docs/roadmap.md`](docs/roadmap.md): RAG vectorial dedicado (ChromaDB), streaming de
+tokens, multiusuario con roles, colas de ejecución y notificaciones de tareas programadas.
+Ya entregados en la Fase 3: agentes por áreas, equipos multi-agente y programación de tareas.
 
 ## Estructura del proyecto
 
@@ -277,17 +375,25 @@ ocs-agentic-enterprise-platform/
   backend/
     app/
       main.py · config.py · database.py · models.py · schemas.py
-      agents/         # BaseAgent + 16 agentes + registro
-      orchestration/  # clasificador, router, planner, motor, verificador, scorer
+      agents/         # BaseAgent + 45 agentes + squads + registro
+      orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
+      connectors/     # conectores de datos (Wazuh, JSON/CSV, HTTP opt-in) + registro
+      pentest/        # 32 herramientas (incl. Metasploit) + playbook adaptativo (scope, runner native/WSL)
+      notifications/  # email (SMTP/Gmail)
       llm/            # contrato LLM + OllamaProvider + ModelRouter
-      tools/          # BaseTool + 19 herramientas + registro
+      tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
+      scheduler/      # cálculo de fechas (cron/diaria/…) + hilo del programador
       audit/          # Chain-of-Work
       rag/            # loader, chunker, retriever, embeddings (RAG semántico)
-      api/            # routers FastAPI (incluye métricas y exportación)
+      api/            # routers FastAPI (scheduler, conectores, pentest, métricas…)
       security/       # auth, políticas, sanitización
-      services/       # fachadas: agent_runner, documentos, ejecuciones, métricas, exportación
-    data/             # SQLite + documentos subidos (no versionado)
-    tests/            # 88 tests
+      services/       # fachadas: agent_runner, scheduler, documentos, ejecuciones, métricas
+    runtime_config.py # ajustes editables (overlay + persistencia en BD)
+    scripts/          # seed_use_cases.py (casos de uso de ejemplo)
+    data/             # SQLite + documentos + datos de conectores (no versionado)
+    tests/            # 159 tests
+  scripts/            # install-kali-windows.ps1, provision-kali.sh
+  examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica
   OCS-Platform.bat    # gestor todo-en-uno para Windows

@@ -1,7 +1,7 @@
 """Endpoints de ejecuciones y Chain-of-Work."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
@@ -30,6 +30,24 @@ def list_executions(
         db, limit=limit, offset=offset, agent_name=agent_name, status=status
     )
     return [ExecutionSummary.model_validate(e) for e in executions]
+
+
+@router.delete("", status_code=status.HTTP_200_OK)
+def delete_executions(
+    status_filter: str | None = Query(default=None, alias="status", description="Borra solo las de este estado"),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    """Borra ejecuciones en bloque (opcionalmente solo las de un estado, p. ej. failed)."""
+    deleted = execution_service.delete_executions(db, status=status_filter)
+    return {"deleted": deleted}
+
+
+@router.delete("/{execution_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_execution(execution_id: int, db: Session = Depends(get_db)) -> Response:
+    """Borra una ejecución concreta y toda su trazabilidad asociada."""
+    if not execution_service.delete_execution(db, execution_id):
+        raise HTTPException(status_code=404, detail=f"Ejecución {execution_id} no encontrada.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{execution_id}", response_model=ExecutionDetail)

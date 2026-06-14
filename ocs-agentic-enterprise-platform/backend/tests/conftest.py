@@ -11,6 +11,7 @@ os.environ.setdefault("USE_LLM_INTENT_FALLBACK", "false")
 os.environ.setdefault("ENABLE_AUXILIARY_AGENTS", "false")
 os.environ.setdefault("ENABLE_AUTH", "false")
 os.environ.setdefault("LOG_JSON", "false")
+os.environ.setdefault("ENABLE_SCHEDULER", "false")
 
 import pytest
 from sqlalchemy import create_engine
@@ -114,6 +115,16 @@ class DownLLMProvider(FakeLLMProvider):
 
     def chat(self, messages, model, temperature: float = 0.2, max_tokens=None):  # type: ignore[override]
         raise LLMConnectionError("No se puede conectar con Ollama (simulado).")
+
+
+@pytest.fixture(autouse=True)
+def _reset_runtime_config():
+    """Aísla el overlay de ajustes en runtime entre tests."""
+    from app import runtime_config
+
+    runtime_config.reset()
+    yield
+    runtime_config.reset()
 
 
 @pytest.fixture()

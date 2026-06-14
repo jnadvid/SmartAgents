@@ -14,7 +14,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import agents, documents, executions, health, metrics, models, tools
+from app.api import (
+    agents,
+    connectors,
+    documents,
+    executions,
+    health,
+    metrics,
+    models,
+    pentest,
+    scheduler,
+    settings as settings_api,
+    subdomains,
+    tools,
+)
 from app.config import get_settings, setup_logging
 from app.database import SessionLocal, init_db
 
@@ -32,8 +45,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.agents.registry import sync_agents_to_db
     from app.services.agent_runner import get_agent_registry, get_llm_provider
 
+    from app import runtime_config
+
     with SessionLocal() as db:
         sync_agents_to_db(db, get_agent_registry())
+        runtime_config.load(db)
 
     ollama = get_llm_provider().healthcheck()
     logger.info(
@@ -53,7 +69,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "Ejecuta `ollama serve` y descarga un modelo con `ollama pull %s`.",
             settings.default_ollama_model,
         )
+
+    # Programador de tareas en segundo plano (puntual y periódico).
+    scheduler_thread = None
+    if settings.enable_scheduler:
+        from app.scheduler.runner import get_scheduler
+
+        scheduler_thread = get_scheduler()
+        scheduler_thread.start()
+
     yield
+
+    if scheduler_thread is not None:
+        scheduler_thread.stop()
     logger.info("Plataforma detenida")
 
 
@@ -87,6 +115,11 @@ def create_app() -> FastAPI:
     app.include_router(documents.router)
     app.include_router(tools.router)
     app.include_router(metrics.router)
+    app.include_router(scheduler.router)
+    app.include_router(connectors.router)
+    app.include_router(pentest.router)
+    app.include_router(subdomains.router)
+    app.include_router(settings_api.router)
 
     # Frontend estático servido en la raíz (después de las rutas de la API).
     frontend_dir = settings.frontend_dir

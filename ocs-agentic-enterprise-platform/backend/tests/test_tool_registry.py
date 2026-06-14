@@ -24,6 +24,12 @@ EXPECTED_TOOLS = {
     "generate_compliance_gap",
     "check_prompt_injection_patterns",
     "generate_executive_report",
+    # Programación (análisis estático determinista)
+    "analyze_code_structure",
+    "review_code_quality",
+    "scan_code_security",
+    "generate_test_skeleton",
+    "extract_code_todos",
 }
 
 

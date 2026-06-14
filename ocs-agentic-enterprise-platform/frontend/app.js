@@ -1,8 +1,10 @@
-/* OCS Agentic Enterprise Platform - frontend Fase 2 (vanilla JS, offline) */
+/* OCS Agentic Enterprise Platform - frontend Fase 3 (vanilla JS, offline) */
 "use strict";
 
 const API = "";
 let AGENTS = [];
+let SQUADS = [];
+let CONNECTORS = [];
 let LAST_EXECUTION_ID = null;
 
 // --------------------------------------------------------------------------
@@ -14,14 +16,26 @@ const ICONS = {
   executions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
   documents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>',
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2 2.5-2.5z"/></svg>',
+  agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 14c2.5 0 5 1.6 5 4.5"/></svg>',
+  scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
+  pentest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  subdomains: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.06-.33.1-.66.1-1z"/></svg>',
+  reports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
 };
 
 const VIEWS = [
   { id: "dashboard", label: "Dashboard", sub: "Visión general de la plataforma" },
-  { id: "assistant", label: "Asistente", sub: "Lanza una tarea a los agentes" },
+  { id: "assistant", label: "Asistente", sub: "Lanza una tarea a un agente o equipo" },
+  { id: "agents", label: "Agentes", sub: "Catálogo por áreas y equipos" },
   { id: "executions", label: "Ejecuciones", sub: "Histórico y trazabilidad" },
+  { id: "reports", label: "Informes", sub: "Informes completos: descarga y borrado" },
+  { id: "scheduler", label: "Programador", sub: "Tareas puntuales y periódicas" },
+  { id: "pentest", label: "Pentest", sub: "Escaneo autorizado con Kali" },
+  { id: "subdomains", label: "Subdominios", sub: "Descubre todos los subdominios de un dominio" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
   { id: "tools", label: "Herramientas", sub: "Catálogo de herramientas locales" },
+  { id: "settings", label: "Ajustes", sub: "Modelo, pentest y entorno de ejecución" },
 ];
 
 // --------------------------------------------------------------------------
@@ -133,7 +147,13 @@ function switchView(id) {
   el("page-title").textContent = v.label;
   el("page-subtitle").textContent = v.sub;
   if (id === "dashboard") loadMetrics();
+  if (id === "agents") loadAgentsView();
   if (id === "executions") loadExecutions();
+  if (id === "reports") loadReports();
+  if (id === "scheduler") loadScheduler();
+  if (id === "pentest") loadPentest();
+  if (id === "subdomains") loadSubdomains();
+  if (id === "settings") loadSettings();
   if (id === "documents") loadDocuments();
 }
 
@@ -209,7 +229,63 @@ async function loadAgents() {
     el("agent-select").innerHTML = AGENTS.map((a) =>
       `<option value="${escapeHtml(a.name)}">${escapeHtml(a.display_name)} — ${escapeHtml(a.category)}</option>`).join("");
     updateAgentHint();
+    buildTeamChecklist("team-agents");
+    buildTeamChecklist("sched-team-agents");
+    if (el("sched-agent")) el("sched-agent").innerHTML = AGENTS.map((a) =>
+      `<option value="${escapeHtml(a.name)}">${escapeHtml(a.display_name)} — ${escapeHtml(a.category)}</option>`).join("");
   } catch (_) {}
+}
+
+// Etiquetas legibles para las áreas (categorías) de agentes.
+const AREA_LABELS = {
+  programming: "💻 Programación", cybersecurity: "🛡️ Ciberseguridad", business: "📈 Negocio",
+  psychology: "🧠 Psicología", compliance: "⚖️ Compliance", hr: "👥 RRHH",
+  projects: "🗂️ Proyectos", finance: "💰 Finanzas", legal: "📜 Legal", sales: "🤝 Ventas",
+  data: "📊 Datos", documents: "📄 Documentos", reporting: "📰 Informes",
+  research: "🔎 Investigación", customer_support: "🎧 Soporte", security_testing: "🔐 Seguridad de prompts",
+};
+function areaLabel(cat) { return AREA_LABELS[cat] || cat; }
+
+async function loadAgentsView() {
+  if (!AGENTS.length) { try { AGENTS = await api("/agents"); } catch (_) {} }
+  el("agents-count").textContent = `${AGENTS.length} agentes · ${new Set(AGENTS.map((a) => a.category)).size} áreas`;
+  const byArea = {};
+  AGENTS.forEach((a) => { (byArea[a.category] = byArea[a.category] || []).push(a); });
+  el("agents-by-area").innerHTML = Object.keys(byArea).sort().map((cat) =>
+    `<div class="area-block"><h4>${escapeHtml(areaLabel(cat))} · ${byArea[cat].length}</h4>
+      <div class="agent-cards">${byArea[cat].map((a) =>
+        `<div class="agent-card"><div class="agent-card-head"><strong>${escapeHtml(a.display_name)}</strong>
+          <button class="btn ghost xs" data-use-agent="${escapeHtml(a.name)}">Usar</button></div>
+          <p>${escapeHtml(a.description)}</p>
+          <div class="agent-tools">${(a.allowed_tools || []).map((t) => `<span class="tool-chip">${escapeHtml(t)}</span>`).join("") || '<span class="muted">sin herramientas</span>'}</div>
+          ${(a.data_access && a.data_access.length) ? `<div class="agent-access" title="Acceso de lectura de datos">🔌 ${a.data_access.map((d) => `<span class="access-chip">${escapeHtml(d)}</span>`).join("")}</div>` : ""}
+        </div>`).join("")}</div></div>`).join("");
+  el("agents-by-area").querySelectorAll("[data-use-agent]").forEach((b) =>
+    b.addEventListener("click", () => useAgentInAssistant(b.dataset.useAgent)));
+
+  if (!SQUADS.length) await loadSquads();
+  el("squads-list").innerHTML = SQUADS.map((s) =>
+    `<div class="squad-card"><div class="agent-card-head"><strong>${escapeHtml(s.display_name)}</strong>
+      <button class="btn ghost xs" data-use-squad="${escapeHtml(s.name)}">Usar</button></div>
+      <p>${escapeHtml(s.description)}</p>
+      <div class="squad-chain">${s.members.map((m) => `<span class="chain-step">${escapeHtml(m)}</span>`).join('<span class="chain-arrow">→</span>')}</div>
+    </div>`).join("") || '<div class="chart-empty">Sin equipos.</div>';
+  el("squads-list").querySelectorAll("[data-use-squad]").forEach((b) =>
+    b.addEventListener("click", () => useSquadInAssistant(b.dataset.useSquad)));
+}
+
+function useAgentInAssistant(name) {
+  switchView("assistant");
+  setMode("manual");
+  el("agent-select").value = name; updateAgentHint();
+  el("task-input").focus();
+}
+function useSquadInAssistant(name) {
+  switchView("assistant");
+  setMode("team");
+  setTeamKind("squad");
+  el("squad-select").value = name; updateSquadHint();
+  el("task-input").focus();
 }
 function updateAgentHint() {
   const a = AGENTS.find((x) => x.name === el("agent-select").value);
@@ -219,9 +295,57 @@ function updateAgentHint() {
 async function loadModels() {
   try {
     const models = await api("/models");
-    el("model-select").innerHTML = '<option value="">(modelo por defecto)</option>' +
+    const opts = '<option value="">(modelo por defecto)</option>' +
       models.map((m) => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join("");
+    el("model-select").innerHTML = opts;
+    if (el("sched-model")) el("sched-model").innerHTML = opts;
+    if (el("pt-model")) el("pt-model").innerHTML = opts;
   } catch (_) { el("model-select").innerHTML = '<option value="">(Ollama no disponible)</option>'; }
+}
+
+async function loadSquads() {
+  try {
+    SQUADS = await api("/agents/squads");
+    const sel = el("squad-select");
+    if (sel) {
+      sel.innerHTML = SQUADS.map((s) =>
+        `<option value="${escapeHtml(s.name)}">${escapeHtml(s.display_name)} (${s.members.length})</option>`).join("");
+      updateSquadHint();
+    }
+    if (el("sched-squad")) {
+      el("sched-squad").innerHTML = SQUADS.map((s) =>
+        `<option value="${escapeHtml(s.name)}">${escapeHtml(s.display_name)}</option>`).join("");
+    }
+  } catch (_) {}
+}
+
+function updateSquadHint() {
+  const s = SQUADS.find((x) => x.name === el("squad-select").value);
+  el("squad-description").textContent = s ? `${s.description} · Cadena: ${s.members.join(" → ")}` : "";
+}
+
+// Casillas de agentes para componer un equipo ad-hoc.
+function buildTeamChecklist(containerId) {
+  const c = el(containerId);
+  if (!c) return;
+  c.innerHTML = AGENTS.map((a) =>
+    `<label class="chk-item"><input type="checkbox" value="${escapeHtml(a.name)}" />
+      <span>${escapeHtml(a.display_name)}</span><span class="chk-cat">${escapeHtml(a.category)}</span></label>`).join("");
+}
+
+function checkedValues(containerId) {
+  return [...el(containerId).querySelectorAll("input:checked")].map((i) => i.value);
+}
+
+async function loadConnectors() {
+  try {
+    CONNECTORS = await api("/connectors");
+    const sel = el("sched-connector");
+    if (sel) {
+      sel.innerHTML = '<option value="">(ninguna)</option>' + CONNECTORS.map((c) =>
+        `<option value="${escapeHtml(c.name)}"${c.enabled ? "" : " disabled"}>${escapeHtml(c.display_name)}${c.enabled ? "" : " (desactivado)"}</option>`).join("");
+    }
+  } catch (_) {}
 }
 
 async function loadTools() {
@@ -241,6 +365,28 @@ async function loadTools() {
 // --------------------------------------------------------------------------
 function currentMode() { return el("mode-seg").querySelector(".seg-btn.active").dataset.mode; }
 
+function setMode(mode) {
+  el("mode-seg").querySelectorAll(".seg-btn").forEach((x) => x.classList.toggle("active", x.dataset.mode === mode));
+  applyMode();
+}
+function applyMode() {
+  const mode = currentMode();
+  el("agent-select-wrap").classList.toggle("hidden", mode !== "manual");
+  el("squad-select-wrap").classList.toggle("hidden", mode !== "team");
+  el("btn-execute").textContent = mode === "team" ? "Ejecutar equipo" : "Ejecutar tarea";
+  el("btn-route").classList.toggle("hidden", mode === "team");
+}
+function teamKind() { return el("team-seg").querySelector(".seg-btn.active").dataset.team; }
+function setTeamKind(kind) {
+  el("team-seg").querySelectorAll(".seg-btn").forEach((x) => x.classList.toggle("active", x.dataset.team === kind));
+  applyTeamKind();
+}
+function applyTeamKind() {
+  const kind = teamKind();
+  el("squad-predef-wrap").classList.toggle("hidden", kind !== "squad");
+  el("squad-custom-wrap").classList.toggle("hidden", kind !== "custom");
+}
+
 async function previewRoute() {
   const task = el("task-input").value.trim();
   if (!task) return toast("Escribe una tarea primero.", "err");
@@ -256,19 +402,34 @@ async function previewRoute() {
 async function executeTask() {
   const task = el("task-input").value.trim();
   if (!task) return toast("Escribe una tarea primero.", "err");
-  const body = {
+  const mode = currentMode();
+  const common = {
     task,
-    agent_name: currentMode() === "manual" ? el("agent-select").value : null,
     model: el("model-select").value || null,
     use_documents: el("use-documents").checked,
     extra_context: el("context-input").value.trim() || null,
   };
+  let path = "/agents/execute", body;
+  if (mode === "team") {
+    body = { ...common };
+    if (teamKind() === "squad") {
+      body.squad_name = el("squad-select").value;
+    } else {
+      const members = checkedValues("team-agents");
+      if (members.length < 2) return toast("Selecciona al menos 2 agentes para el equipo.", "err");
+      body.agent_names = members;
+    }
+    path = "/agents/squads/execute";
+  } else {
+    body = { ...common, agent_name: mode === "manual" ? el("agent-select").value : null };
+  }
+
   el("result-empty").classList.add("hidden");
   el("result-content").classList.add("hidden");
   el("result-loading").classList.remove("hidden");
   el("btn-execute").disabled = true;
   try {
-    const r = await api("/agents/execute", { method: "POST", body: JSON.stringify(body) });
+    const r = await api(path, { method: "POST", body: JSON.stringify(body) });
     renderResult(r);
   } catch (e) {
     el("result-content").classList.remove("hidden");
@@ -327,10 +488,85 @@ async function loadExecutions() {
        <td>${escapeHtml(e.model_name)}</td><td>${statusBadge(e.status)}</td>
        <td>${e.confidence_score != null ? Math.round(e.confidence_score * 100) + "%" : "—"}</td>
        <td>${new Date(e.created_at).toLocaleString()}</td>
-       <td><button class="btn ghost sm" data-exec="${e.id}">Ver</button></td></tr>`).join("");
+       <td class="sched-actions"><button class="btn ghost sm" data-exec="${e.id}">Ver</button>
+         <button class="btn ghost sm" data-del-exec="${e.id}" title="Borrar">🗑</button></td></tr>`).join("");
     el("executions-table").querySelectorAll("button[data-exec]").forEach((b) =>
       b.addEventListener("click", () => showExecutionDetail(b.dataset.exec)));
+    el("executions-table").querySelectorAll("button[data-del-exec]").forEach((b) =>
+      b.addEventListener("click", () => deleteExecution(b.dataset.delExec)));
   } catch (_) {}
+}
+
+async function deleteExecution(id) {
+  if (!confirm(`¿Borrar la ejecución #${id}?`)) return;
+  try {
+    const res = await fetch(`/executions/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    toast("Ejecución borrada.", "ok");
+    el("execution-detail").classList.add("hidden");
+    loadExecutions();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function clearFailedExecutions() {
+  if (!confirm("¿Borrar TODAS las ejecuciones fallidas?")) return;
+  try {
+    const r = await api("/executions?status=failed", { method: "DELETE" });
+    toast(`${r.deleted} ejecución(es) borrada(s).`, "ok");
+    loadExecutions();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// --------------------------------------------------------------------------
+// Informes
+// --------------------------------------------------------------------------
+let REPORTS = [];
+const PENTEST_AGENTS = ["web_pentester", "pentest_lead"];
+
+async function loadReports() {
+  try { REPORTS = await api("/executions?limit=200"); renderReports(); }
+  catch (e) { el("reports-list").innerHTML = `<div class="muted">${escapeHtml(e.message)}</div>`; }
+}
+
+function renderReports() {
+  const q = (el("reports-filter").value || "").toLowerCase();
+  const items = REPORTS
+    .filter((e) => e.status === "completed" || e.status === "completed_with_warnings")
+    .filter((e) => !q || `${e.agent_name} ${e.intent} #${e.id}`.toLowerCase().includes(q));
+  el("reports-count").textContent = `· ${items.length}`;
+  if (!items.length) { el("reports-list").innerHTML = '<div class="chart-empty">No hay informes todavía.</div>'; return; }
+  el("reports-list").innerHTML = items.map((e) => {
+    const isPentest = PENTEST_AGENTS.includes(e.agent_name);
+    const conf = e.confidence_score != null ? Math.round(e.confidence_score * 100) + "%" : "—";
+    return `<div class="report-card ${isPentest ? "pentest" : ""}">
+      <div class="report-head"><strong>${isPentest ? "🛡️ " : "📄 "}${escapeHtml(e.agent_name)}</strong>
+        ${statusBadge(e.status)}<span class="badge">${conf}</span></div>
+      <div class="doc-meta">#${e.id} · ${escapeHtml(e.intent || "—")} · ${new Date(e.created_at).toLocaleString()}</div>
+      <div class="report-actions">
+        <button class="btn ghost xs" data-rep-view="${e.id}">Ver</button>
+        ${isPentest ? `<button class="btn ghost xs" data-rep-pdf="${e.id}">🛡 Informe</button>` : ""}
+        <button class="btn ghost xs" data-rep-md="${e.id}">⬇ MD</button>
+        <button class="btn ghost xs" data-rep-html="${e.id}">⬇ HTML</button>
+        <button class="btn ghost xs" data-rep-del="${e.id}">🗑</button>
+      </div></div>`;
+  }).join("");
+  const grid = el("reports-list");
+  grid.querySelectorAll("[data-rep-view]").forEach((b) => b.addEventListener("click", () => { switchView("executions"); showExecutionDetail(b.dataset.repView); }));
+  grid.querySelectorAll("[data-rep-pdf]").forEach((b) => b.addEventListener("click", () => window.open(`/pentest/report/${b.dataset.repPdf}`, "_blank")));
+  grid.querySelectorAll("[data-rep-md]").forEach((b) => b.addEventListener("click", () => window.open(`/executions/${b.dataset.repMd}/export?format=markdown`, "_blank")));
+  grid.querySelectorAll("[data-rep-html]").forEach((b) => b.addEventListener("click", () => window.open(`/executions/${b.dataset.repHtml}/export?format=html`, "_blank")));
+  grid.querySelectorAll("[data-rep-del]").forEach((b) => b.addEventListener("click", () => deleteReport(b.dataset.repDel)));
+}
+
+async function deleteReport(id) {
+  if (!confirm(`¿Borrar el informe #${id}?`)) return;
+  try {
+    const res = await fetch(`/executions/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    toast("Informe borrado.", "ok");
+    REPORTS = REPORTS.filter((e) => String(e.id) !== String(id));
+    renderReports();
+  } catch (e) { toast(e.message, "err"); }
 }
 
 async function showExecutionDetail(id) {
@@ -375,6 +611,137 @@ async function reindexEmbeddings() {
   finally { el("btn-reindex").disabled = false; }
 }
 
+// --------------------------------------------------------------------------
+// Subdominios (OSINT)
+// --------------------------------------------------------------------------
+const SD_MAP = new Map();   // nombre -> {sources:Set, resolved:bool|null, ip:string|null}
+let SD_DOMAIN = "";
+
+async function loadSubdomains() {
+  try {
+    const s = await api("/subdomains/status");
+    const avail = s.tools.filter((t) => t.available).map((t) => t.name);
+    const toolsTxt = s.pentest_enabled
+      ? (avail.length ? `herramientas: ${avail.join(", ")}` : "sin herramientas instaladas (solo crt.sh y documentos)")
+      : "pentest desactivado (solo crt.sh y documentos)";
+    el("sd-status").innerHTML = `<span class="status-dot ${avail.length ? "up" : "down"}"></span> Modo ${escapeHtml(s.execution_mode)} · ${escapeHtml(toolsTxt)}`;
+  } catch (e) { el("sd-status").textContent = ""; }
+}
+
+function sdMergeItems(items) {
+  for (const it of items) {
+    let cur = SD_MAP.get(it.name);
+    if (!cur) { cur = { sources: new Set(), resolved: null, ip: null }; SD_MAP.set(it.name, cur); }
+    (it.sources || []).forEach((s) => cur.sources.add(s));
+    if (it.resolved !== null && it.resolved !== undefined) { cur.resolved = it.resolved; cur.ip = it.ip; }
+  }
+}
+
+async function sdSearch() {
+  const domain = el("sd-domain").value.trim();
+  if (!domain) return toast("Indica un dominio.", "err");
+  SD_DOMAIN = domain;
+  el("btn-sd-search").disabled = true;
+  el("sd-loading").classList.remove("hidden");
+  el("sd-msg").textContent = "Consultando crt.sh y herramientas…";
+  try {
+    const r = await api("/subdomains/enumerate", { method: "POST", body: JSON.stringify({
+      domain, use_tools: el("sd-use-tools").checked, use_amass: el("sd-use-amass").checked, resolve: false }) });
+    sdMergeItems(r.subdomains);
+    el("sd-msg").textContent = `✓ ${r.total} subdominio(s) · ${r.sources.map((s) => `${s.source}: ${s.count}`).join(" · ") || "sin resultados"}`;
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-search").disabled = false; el("sd-loading").classList.add("hidden"); }
+}
+
+async function sdExtract() {
+  const domain = el("sd-domain").value.trim();
+  if (!domain) return toast("Indica un dominio (para reconocer sus subdominios).", "err");
+  const input = el("sd-files");
+  if (!input.files.length) return toast("Selecciona uno o más documentos.", "err");
+  SD_DOMAIN = domain;
+  const fd = new FormData();
+  fd.append("domain", domain);
+  for (const f of input.files) fd.append("files", f);
+  el("btn-sd-extract").disabled = true;
+  el("sd-msg").textContent = "Analizando documentos…";
+  try {
+    const res = await fetch("/subdomains/extract", { method: "POST", body: fd });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || `HTTP ${res.status}`); }
+    const r = await res.json();
+    sdMergeItems(r.subdomains);
+    el("sd-msg").textContent = `✓ ${r.total} subdominio(s) en ${input.files.length} documento(s).`;
+    input.value = "";
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-extract").disabled = false; }
+}
+
+async function sdResolve() {
+  if (!SD_MAP.size) return toast("No hay subdominios que resolver.", "err");
+  const names = [...SD_MAP.keys()];
+  el("btn-sd-resolve").disabled = true;
+  el("sd-msg").textContent = `Resolviendo ${names.length} subdominio(s) por DNS…`;
+  try {
+    const r = await api("/subdomains/resolve", { method: "POST", body: JSON.stringify({ domain: SD_DOMAIN || (names[0].split(".").slice(-2).join(".")), names }) });
+    sdMergeItems(r.subdomains);
+    const live = r.subdomains.filter((s) => s.resolved).length;
+    el("sd-msg").textContent = `✓ ${live}/${r.total} resuelven (tienen IP).`;
+    sdRender();
+  } catch (e) { el("sd-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-sd-resolve").disabled = false; }
+}
+
+function sdSortedNames() {
+  return [...SD_MAP.keys()].sort((a, b) =>
+    a.split(".").reverse().join(".").localeCompare(b.split(".").reverse().join(".")));
+}
+
+function sdRender() {
+  const filter = (el("sd-filter").value || "").trim().toLowerCase();
+  const names = sdSortedNames().filter((n) => !filter || n.includes(filter));
+  el("sd-count").textContent = `· ${SD_MAP.size}` + (filter ? ` (${names.length} filtrados)` : "");
+  el("sd-empty").classList.toggle("hidden", SD_MAP.size > 0);
+  // Leyenda de fuentes
+  const srcCount = {};
+  for (const v of SD_MAP.values()) v.sources.forEach((s) => { srcCount[s] = (srcCount[s] || 0) + 1; });
+  el("sd-sources").innerHTML = Object.entries(srcCount).sort()
+    .map(([s, c]) => `<span class="badge">${escapeHtml(s)} · ${c}</span>`).join("");
+  el("sd-table").innerHTML = names.map((n) => {
+    const v = SD_MAP.get(n);
+    const chips = [...v.sources].sort().map((s) => `<span class="src-chip">${escapeHtml(s)}</span>`).join("");
+    let dns = "";
+    if (v.resolved === true) dns = `<span class="badge ok-badge">${escapeHtml(v.ip)}</span>`;
+    else if (v.resolved === false) dns = `<span class="badge dim-badge">no resuelve</span>`;
+    return `<div class="sd-row"><code class="sd-name">${escapeHtml(n)}</code><span class="sd-src">${chips}</span><span class="sd-dns">${dns}</span></div>`;
+  }).join("");
+}
+
+function sdExport(fmt) {
+  if (!SD_MAP.size) return toast("No hay nada que exportar.", "err");
+  const names = sdSortedNames();
+  let content, mime, ext;
+  if (fmt === "csv") {
+    content = "subdominio,fuentes,resuelve,ip\n" + names.map((n) => {
+      const v = SD_MAP.get(n);
+      return `${n},"${[...v.sources].join("; ")}",${v.resolved === null ? "" : v.resolved},${v.ip || ""}`;
+    }).join("\n");
+    mime = "text/csv"; ext = "csv";
+  } else {
+    content = names.join("\n"); mime = "text/plain"; ext = "txt";
+  }
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `subdominios-${SD_DOMAIN || "dominio"}.${ext}`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function sdClear() {
+  if (SD_MAP.size && !confirm("¿Vaciar la lista de subdominios?")) return;
+  SD_MAP.clear(); el("sd-msg").textContent = ""; sdRender();
+}
+
 async function loadDocuments() {
   try {
     const docs = await api("/documents");
@@ -399,6 +766,471 @@ async function searchDocuments() {
 }
 
 // --------------------------------------------------------------------------
+// Programador de tareas
+// --------------------------------------------------------------------------
+function schedBadge(status) {
+  const map = { scheduled: "ok", paused: "warn", finished: "", error: "err" };
+  return `<span class="badge ${map[status] ?? ""}">${escapeHtml(status)}</span>`;
+}
+
+function applySchedTarget() {
+  const kind = el("sched-target-kind").value;
+  el("sched-agent-wrap").classList.toggle("hidden", kind !== "agent");
+  el("sched-squad-wrap").classList.toggle("hidden", kind !== "squad");
+  el("sched-team-wrap").classList.toggle("hidden", kind !== "team");
+}
+function applySchedKind() {
+  const kind = el("sched-kind").value;
+  [["once", "sched-once-wrap"], ["interval", "sched-interval-wrap"], ["daily", "sched-daily-wrap"],
+   ["weekly", "sched-weekly-wrap"], ["cron", "sched-cron-wrap"]].forEach(([k, id]) =>
+    el(id).classList.toggle("hidden", kind !== k));
+}
+function applySchedConnector() {
+  const c = el("sched-connector").value;
+  el("sched-connector-params-wrap").classList.toggle("hidden", !c);
+  const info = CONNECTORS.find((x) => x.name === c);
+  el("sched-connector-hint").textContent = info
+    ? `${info.description} · El objetivo debe ser un agente/equipo con acceso a este conector.`
+    : "";
+}
+
+async function loadScheduler() {
+  await loadSchedulerStatus();
+  await loadScheduledTasks();
+}
+
+async function loadSchedulerStatus() {
+  try {
+    const s = await api("/scheduler/status");
+    const next = s.next_run_at ? new Date(s.next_run_at).toLocaleString() : "—";
+    const dot = s.running ? "up" : "down";
+    el("scheduler-status").innerHTML =
+      `<span class="status-dot ${dot}"></span> Programador ${s.running ? "activo" : (s.enabled ? "habilitado" : "desactivado")}
+       · sondeo cada ${s.poll_seconds}s · ${s.active_tasks}/${s.total_tasks} activas · próxima: ${escapeHtml(next)}`;
+  } catch (e) { el("scheduler-status").textContent = ""; }
+}
+
+async function loadScheduledTasks() {
+  const tbody = el("sched-table").querySelector("tbody");
+  try {
+    const tasks = await api("/scheduler/tasks");
+    if (!tasks.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay tareas programadas.</td></tr>'; return; }
+    tbody.innerHTML = tasks.map((t) => {
+      const target = t.target_kind === "auto" ? "Auto"
+        : t.target_kind === "team" ? `Equipo: ${escapeHtml(t.agent_names.join(", "))}`
+        : `${t.target_kind}: ${escapeHtml(t.target_ref)}`;
+      const next = t.next_run_at ? new Date(t.next_run_at).toLocaleString() : "—";
+      const toggle = t.enabled
+        ? `<button class="btn ghost xs" data-sched-pause="${t.id}">⏸</button>`
+        : `<button class="btn ghost xs" data-sched-resume="${t.id}">▶</button>`;
+      const conn = t.connector ? ` <span class="badge accent">🔌 ${escapeHtml(t.connector)}</span>` : "";
+      return `<tr><td><strong>${escapeHtml(t.name)}</strong><div class="doc-meta">#${t.id}</div></td>
+        <td>${target}</td><td>${escapeHtml(t.schedule_human)}${conn}</td>
+        <td>${escapeHtml(next)}</td><td>${schedBadge(t.status)}${t.last_status ? ` <span class="badge">${escapeHtml(t.last_status)}</span>` : ""}</td>
+        <td>${t.run_count}</td>
+        <td class="sched-actions">${toggle}
+          <button class="btn ghost xs" data-sched-run="${t.id}" title="Ejecutar ahora">▶▶</button>
+          <button class="btn ghost xs" data-sched-view="${t.id}" title="Histórico">👁</button>
+          <button class="btn ghost xs" data-sched-del="${t.id}" title="Borrar">🗑</button></td></tr>`;
+    }).join("");
+    bindSchedActions();
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="7" class="muted">${escapeHtml(e.message)}</td></tr>`; }
+}
+
+function bindSchedActions() {
+  const q = (sel, fn) => el("sched-table").querySelectorAll(sel).forEach((b) => b.addEventListener("click", fn));
+  q("[data-sched-pause]", (e) => schedAction(e.currentTarget.dataset.schedPause, "pause"));
+  q("[data-sched-resume]", (e) => schedAction(e.currentTarget.dataset.schedResume, "resume"));
+  q("[data-sched-run]", (e) => schedRunNow(e.currentTarget.dataset.schedRun));
+  q("[data-sched-view]", (e) => showSchedDetail(e.currentTarget.dataset.schedView));
+  q("[data-sched-del]", (e) => schedDelete(e.currentTarget.dataset.schedDel));
+}
+
+async function schedAction(id, action) {
+  try { await api(`/scheduler/tasks/${id}/${action}`, { method: "POST" }); toast("Tarea actualizada.", "ok"); loadScheduler(); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function schedRunNow(id) {
+  toast("Ejecutando…");
+  try {
+    const run = await api(`/scheduler/tasks/${id}/run-now`, { method: "POST" });
+    toast(`Ejecutada: ${run.status}`, run.status === "completed" ? "ok" : "warn");
+    loadScheduler();
+    if (run.execution_id) { switchView("executions"); showExecutionDetail(run.execution_id); }
+  } catch (e) { toast(e.message, "err"); }
+}
+async function schedDelete(id) {
+  if (!confirm("¿Borrar esta tarea programada?")) return;
+  try { await fetch(`/scheduler/tasks/${id}`, { method: "DELETE" }); toast("Tarea borrada.", "ok"); loadScheduler(); }
+  catch (e) { toast(e.message, "err"); }
+}
+
+async function showSchedDetail(id) {
+  try {
+    const t = await api(`/scheduler/tasks/${id}`);
+    const runs = (t.runs || []).map((r) =>
+      `<li><span class="badge ${r.status === "completed" ? "ok" : r.status === "failed" || r.status === "error" ? "err" : "warn"}">${escapeHtml(r.status)}</span>
+        ${new Date(r.started_at).toLocaleString()}${r.execution_id ? ` · <a href="#" data-exec-link="${r.execution_id}">ejecución #${r.execution_id}</a>` : ""}
+        ${r.message ? `<div class="doc-meta">${escapeHtml(r.message)}</div>` : ""}</li>`).join("") || "<li class='muted'>Sin ejecuciones todavía.</li>";
+    const d = el("sched-detail");
+    d.classList.remove("hidden");
+    d.innerHTML = `<h4>${escapeHtml(t.name)} · histórico</h4><div class="doc-meta">${escapeHtml(t.schedule_human)} · ${escapeHtml(t.timezone)}</div>
+      <ul class="search-results">${runs}</ul>`;
+    d.querySelectorAll("[data-exec-link]").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault(); switchView("executions"); showExecutionDetail(a.dataset.execLink);
+    }));
+    d.scrollIntoView({ behavior: "smooth" });
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function createScheduledTask() {
+  const name = el("sched-name").value.trim();
+  const task = el("sched-task").value.trim();
+  if (!name || !task) return toast("Indica nombre y tarea.", "err");
+  const targetKind = el("sched-target-kind").value;
+  const kind = el("sched-kind").value;
+  const payload = {
+    name, task,
+    extra_context: el("sched-context").value.trim() || null,
+    model: el("sched-model").value || null,
+    use_documents: el("sched-docs").checked,
+    target_kind: targetKind,
+    schedule_kind: kind,
+    timezone: el("sched-tz").value.trim() || "UTC",
+  };
+  if (targetKind === "agent") payload.target_ref = el("sched-agent").value;
+  else if (targetKind === "squad") payload.target_ref = el("sched-squad").value;
+  else if (targetKind === "team") {
+    payload.agent_names = checkedValues("sched-team-agents");
+    if (payload.agent_names.length < 2) return toast("Selecciona al menos 2 agentes.", "err");
+  }
+  if (kind === "once") {
+    if (!el("sched-runat").value) return toast("Indica fecha y hora.", "err");
+    payload.run_at = new Date(el("sched-runat").value).toISOString();
+  } else if (kind === "interval") payload.interval_minutes = parseInt(el("sched-interval").value, 10);
+  else if (kind === "daily") payload.time_of_day = el("sched-daily-time").value;
+  else if (kind === "weekly") { payload.day_of_week = parseInt(el("sched-weekday").value, 10); payload.time_of_day = el("sched-weekly-time").value; }
+  else if (kind === "cron") payload.cron = el("sched-cron").value.trim();
+
+  const connector = el("sched-connector").value;
+  if (connector) {
+    payload.connector = connector;
+    const raw = el("sched-connector-params").value.trim();
+    if (raw) {
+      try { payload.connector_params = JSON.parse(raw); }
+      catch (_) { return toast("Parámetros del conector: JSON inválido.", "err"); }
+    }
+  }
+
+  el("btn-create-sched").disabled = true;
+  try {
+    await api("/scheduler/tasks", { method: "POST", body: JSON.stringify(payload) });
+    el("sched-form-msg").textContent = "✓ Tarea programada.";
+    el("sched-name").value = ""; el("sched-task").value = ""; el("sched-context").value = "";
+    toast("Tarea programada.", "ok");
+    loadScheduler();
+  } catch (e) { el("sched-form-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-create-sched").disabled = false; }
+}
+
+// --------------------------------------------------------------------------
+// Pentest (Kali, autorizado)
+// --------------------------------------------------------------------------
+async function loadPentest() {
+  // Agentes de ciberseguridad como analistas.
+  if (!AGENTS.length) { try { AGENTS = await api("/agents"); } catch (_) {} }
+  const cyber = AGENTS.filter((a) => a.category === "cybersecurity");
+  el("pt-agent").innerHTML = cyber.map((a) =>
+    `<option value="${escapeHtml(a.name)}"${a.name === "web_pentester" ? " selected" : ""}>${escapeHtml(a.display_name)}</option>`).join("");
+  applyPtMode();
+  try {
+    const s = await api("/pentest/status");
+    const avail = s.tools.filter((t) => t.available).map((t) => t.name);
+    el("pt-wordlist").innerHTML = '<option value="">(por defecto)</option>' +
+      (s.wordlists || []).map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w.split("/").pop())}</option>`).join("");
+    PT_TYPES = s.pentest_types || {};
+    el("pt-type").innerHTML = Object.entries(PT_TYPES).map(([k, v]) =>
+      `<option value="${escapeHtml(k)}">${escapeHtml(v.label)}</option>`).join("");
+    applyPtType();
+    renderToolsGrid(s.tools);
+    if (document.activeElement !== el("pt-scope")) el("pt-scope").value = s.scope_allowlist || "";
+    const dot = s.enabled && s.scope_configured && s.mode_ok ? "up" : "down";
+    let msg;
+    if (!s.enabled) msg = "Pentest DESACTIVADO. Actívalo en Ajustes (o ENABLE_PENTEST_TOOLS).";
+    else if (!s.scope_configured) msg = "Sin alcance autorizado: defínelo abajo, en «Alcance autorizado».";
+    else msg = `Activo · modo ${s.execution_mode} · ${s.scope_count} en alcance · ${avail.length}/${s.tools.length} herramientas instaladas`;
+    const diag = s.mode_check ? `<div class="muted" style="margin-top:4px">${s.mode_ok ? "✓" : "⚠"} ${escapeHtml(s.mode_check)}</div>` : "";
+    el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}${diag}`;
+  } catch (e) { el("pentest-status").textContent = ""; }
+}
+
+let PT_TYPES = {};
+function applyPtMode() {
+  const auto = el("pt-auto").checked;
+  el("pt-profile-wrap").classList.toggle("hidden", auto);
+  el("pt-aggressive-wrap").classList.toggle("hidden", !auto);
+  el("pt-type-wrap").classList.toggle("hidden", !auto);
+  if (auto && [...el("pt-agent").options].some((o) => o.value === "pentest_lead")) el("pt-agent").value = "pentest_lead";
+}
+function applyPtType() {
+  const t = PT_TYPES[el("pt-type").value];
+  el("pt-type-hint").textContent = t ? `Analista: ${t.agent} · Metodología: ${t.methodology}` : "";
+}
+
+function renderToolsGrid(tools) {
+  const grid = el("pt-tools-grid");
+  if (!grid || !tools) return;
+  const inst = tools.filter((t) => t.available).length;
+  el("pt-tools-count").textContent = `· ${inst}/${tools.length} instaladas`;
+  grid.innerHTML = tools.map((t) =>
+    `<span class="tool-pill ${t.available ? "ok" : "no"}" title="${escapeHtml(t.binary)}">${t.available ? "●" : "○"} ${escapeHtml(t.name)}</span>`).join("");
+}
+
+async function recheckTools() {
+  el("btn-pt-recheck").disabled = true;
+  try { const s = await api("/pentest/recheck", { method: "POST" }); renderToolsGrid(s.tools); toast("Herramientas comprobadas.", "ok"); }
+  catch (e) { toast(e.message, "err"); }
+  finally { el("btn-pt-recheck").disabled = false; }
+}
+
+async function savePtScope() {
+  const scope = el("pt-scope").value.trim();
+  el("btn-pt-scope-save").disabled = true;
+  el("pt-scope-msg").textContent = "Guardando…";
+  try {
+    await api("/settings", { method: "PUT", body: JSON.stringify({ pentest_scope_allowlist: scope }) });
+    const n = scope ? scope.split(",").map((s) => s.trim()).filter(Boolean).length : 0;
+    el("pt-scope-msg").textContent = n ? `✓ Alcance guardado · ${n} objetivo(s) autorizado(s).` : "✓ Alcance vacío: ningún objetivo autorizado.";
+    toast("Alcance autorizado guardado.", "ok");
+    loadPentest();
+  } catch (e) { el("pt-scope-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-pt-scope-save").disabled = false; }
+}
+
+let PT_INSTALL_TIMER = null;
+async function installTools() {
+  if (!confirm("Esto instalará/actualizará las herramientas de Kali (puede tardar varios minutos). ¿Continuar?")) return;
+  el("btn-pt-install").disabled = true;
+  el("pt-install-log").classList.remove("hidden");
+  el("pt-install-log").textContent = "Iniciando…";
+  try {
+    await api("/pentest/tools/install", { method: "POST" });
+    clearInterval(PT_INSTALL_TIMER);
+    PT_INSTALL_TIMER = setInterval(pollInstall, 2500);
+  } catch (e) { toast(e.message, "err"); el("btn-pt-install").disabled = false; }
+}
+
+async function pollInstall() {
+  try {
+    const s = await api("/pentest/tools/install/status");
+    el("pt-install-log").textContent = s.log || "(sin salida todavía)";
+    el("pt-install-log").scrollTop = el("pt-install-log").scrollHeight;
+    if (!s.running) {
+      clearInterval(PT_INSTALL_TIMER);
+      el("btn-pt-install").disabled = false;
+      toast(`Instalación finalizada (código ${s.returncode}).`, s.returncode === 0 ? "ok" : "warn");
+      recheckTools();
+    }
+  } catch (_) {}
+}
+
+let PT_PROGRESS_TIMER = null;
+async function runPentest() {
+  const target = el("pt-target").value.trim();
+  if (!target) return toast("Indica un objetivo.", "err");
+  if (!el("pt-authorized").checked) return toast("Debes confirmar la autorización.", "err");
+  const auto = el("pt-auto").checked;
+  const options = el("pt-wordlist").value ? { wordlist: el("pt-wordlist").value } : {};
+  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: el("pt-email").value.trim() || null, options };
+  const path = auto ? "/pentest/start-auto" : "/pentest/start";
+  const body = auto
+    ? { ...common, aggressive: el("pt-aggressive").checked, pentest_type: el("pt-type").value || "web" }
+    : { ...common, profile: el("pt-profile").value };
+
+  el("pt-empty").classList.add("hidden");
+  el("pt-result").classList.add("hidden");
+  el("pt-loading").classList.add("hidden");
+  el("pt-progress").classList.remove("hidden");
+  el("pt-prog-timeline").innerHTML = ""; el("pt-msg").textContent = "";
+  el("btn-pentest-run").disabled = true;
+  try {
+    renderProgress(await api(path, { method: "POST", body: JSON.stringify(body) }));
+    clearInterval(PT_PROGRESS_TIMER);
+    PT_PROGRESS_TIMER = setInterval(pollPentestProgress, 1300);
+  } catch (e) {
+    el("pt-progress").classList.add("hidden");
+    el("pt-msg").textContent = `Error: ${e.message}`; toast(e.message, "err");
+    el("btn-pentest-run").disabled = false;
+  }
+}
+
+async function pollPentestProgress() {
+  try {
+    const p = await api("/pentest/progress");
+    renderProgress(p);
+    if (!p.running) {
+      clearInterval(PT_PROGRESS_TIMER);
+      el("btn-pentest-run").disabled = false;
+      el("pt-progress").classList.add("hidden");
+      if (p.result) renderPentest(p.result);
+      else if (p.error) { el("pt-msg").textContent = `Error: ${p.error}`; toast(p.error, "err"); }
+    }
+  } catch (_) {}
+}
+
+const STEP_KIND = { running: "run", success: "ok", error: "err", timeout: "warn", unavailable: "no" };
+function renderProgress(p) {
+  el("pt-prog-stage").textContent = p.stage || (p.running ? "Trabajando…" : p.status);
+  el("pt-prog-pct").textContent = p.percent + "%";
+  el("pt-prog-fill").style.setProperty("--p", p.percent + "%");
+  const sev = Object.entries(p.findings_by_severity || {}).filter(([, n]) => n).map(([s, n]) => `${s}: ${n}`).join(" · ");
+  el("pt-prog-sub").textContent = `${p.done}/${p.total} herramientas` + (sev ? ` · hallazgos: ${sev}` : "");
+  const byPhase = {};
+  (p.steps || []).forEach((s) => { (byPhase[s.phase] = byPhase[s.phase] || []).push(s); });
+  el("pt-prog-timeline").innerHTML = Object.entries(byPhase).map(([phase, steps]) =>
+    `<div class="tl-phase"><div class="tl-phase-name">${escapeHtml(phase)}</div>
+      <div class="tl-steps">${steps.map((s) =>
+        `<span class="tl-step ${STEP_KIND[s.status] || ""}" title="${escapeHtml(s.tool)} · ${escapeHtml(s.status)}${s.duration_ms ? ` · ${s.duration_ms}ms` : ""}">${escapeHtml(s.tool)}</span>`).join("")}</div></div>`).join("");
+}
+
+function renderPentest(r) {
+  el("pt-result").classList.remove("hidden");
+  const statusKind = r.status === "completed" ? "ok" : r.status === "denied" || r.status === "disabled" ? "warn" : "err";
+  el("pt-meta").innerHTML = [
+    `<span class="badge ${statusKind}">${escapeHtml(r.status)}</span>`,
+    r.host ? `<span class="badge">🎯 ${escapeHtml(r.host)}</span>` : "",
+    r.profile ? `<span class="badge">${escapeHtml(r.profile)}</span>` : "",
+    r.emailed ? `<span class="badge ok">📧 enviado</span>` : (r.email_message ? `<span class="badge err">📧 ${escapeHtml(r.email_message)}</span>` : ""),
+    `<span class="badge">${escapeHtml(r.message)}</span>`,
+  ].join(" ");
+  renderFindings(r);
+  el("pt-tools").innerHTML = (r.tools || []).map((t) =>
+    `<div class="pt-tool"><div class="pt-tool-head"><strong>${escapeHtml(t.tool_name)}</strong>
+      ${t.phase ? `<span class="badge">${escapeHtml(t.phase)}</span>` : ""}
+      <span class="badge ${t.status === "success" ? "ok" : t.status === "unavailable" ? "warn" : "err"}">${escapeHtml(t.status)}</span>
+      <span class="muted">${t.duration_ms}ms</span></div>
+      ${t.command ? `<div class="doc-meta">${escapeHtml(t.command)}</div>` : ""}
+      <pre class="pt-output">${escapeHtml(t.output || t.summary || "(sin salida)")}</pre></div>`).join("")
+    || '<div class="muted">No se ejecutaron herramientas.</div>';
+  el("pt-report").innerHTML = r.execution && r.execution.final_output
+    ? renderMarkdown(r.execution.final_output)
+    : `<p class="muted">${escapeHtml(r.status === "completed" ? "Sin informe." : r.message)}</p>`;
+  const reportBtn = el("btn-pt-report");
+  if (r.execution && r.execution.execution_id) {
+    LAST_EXECUTION_ID = r.execution.execution_id;
+    reportBtn.classList.remove("hidden");
+    reportBtn.onclick = () => window.open(`/pentest/report/${r.execution.execution_id}`, "_blank");
+  } else reportBtn.classList.add("hidden");
+}
+
+const SEV_KIND = { critical: "err", high: "err", medium: "warn", low: "", info: "" };
+function renderFindings(r) {
+  const findings = r.findings || [];
+  const box = el("pt-findings");
+  if (!findings.length) { box.innerHTML = ""; return; }
+  const counts = r.findings_by_severity || {};
+  const chips = ["critical", "high", "medium", "low", "info"].filter((s) => counts[s])
+    .map((s) => `<span class="badge ${SEV_KIND[s] || ""}">${s}: ${counts[s]}</span>`).join(" ");
+  const rows = findings.slice(0, 25).map((f) =>
+    `<li><span class="badge ${SEV_KIND[f.severity] || ""}">${escapeHtml(f.severity)}</span>
+      ${escapeHtml(f.title)} ${f.cve ? `<span class="badge accent">${escapeHtml(f.cve)}</span>` : ""}
+      <span class="muted">· ${escapeHtml(f.tool)}</span></li>`).join("");
+  box.innerHTML = `<div class="pt-findings-box"><div class="pt-findings-head">
+      <strong>🚩 Hallazgos priorizados</strong> ${chips}</div>
+      <ol class="pt-findings-list">${rows}</ol></div>`;
+}
+
+// --------------------------------------------------------------------------
+// Ajustes
+// --------------------------------------------------------------------------
+let SETTINGS_INFO = { host_os: "", wsl_available: false };
+
+async function loadSettings() {
+  try {
+    const s = await api("/settings");
+    SETTINGS_INFO = { host_os: s.host_os, wsl_available: s.wsl_available };
+    const models = s.available_models && s.available_models.length ? s.available_models : [s.default_ollama_model];
+    const opts = [...new Set([s.default_ollama_model, ...models])].filter(Boolean);
+    el("set-model").innerHTML = opts.map((m) =>
+      `<option value="${escapeHtml(m)}"${m === s.default_ollama_model ? " selected" : ""}>${escapeHtml(m)}</option>`).join("");
+    el("set-pentest").checked = s.enable_pentest_tools;
+    el("set-mode").value = s.pentest_execution_mode;
+    const distros = s.wsl_distros || [];
+    if (s.pentest_wsl_distro && !distros.includes(s.pentest_wsl_distro)) distros.push(s.pentest_wsl_distro);
+    el("set-distro").innerHTML = '<option value="">(distro por defecto)</option>' +
+      distros.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
+    el("set-distro").value = s.pentest_wsl_distro || "";
+    el("set-wsl-user").value = s.pentest_wsl_user || "";
+    el("set-wsl-pass").placeholder = s.pentest_wsl_password_set ? "(configurada · sin cambios)" : "(sin definir)";
+    // Email
+    el("set-smtp-host").value = s.smtp_host || "";
+    el("set-smtp-port").value = s.smtp_port || 587;
+    el("set-smtp-user").value = s.smtp_user || "";
+    el("set-smtp-from").value = s.smtp_from || "";
+    el("set-smtp-pass").placeholder = s.smtp_password_set ? "(configurada · sin cambios)" : "(sin definir)";
+    el("set-smtp-tls").checked = s.smtp_use_tls;
+    el("set-notify").value = s.notify_email || "";
+    el("set-test-email").value = s.notify_email || "";
+    el("set-company").value = s.company_name || "";
+    el("set-report-footer").value = s.report_footer || "";
+    el("set-logo").value = s.report_logo_url || "";
+    el("settings-host").innerHTML = `<span class="status-dot ${s.wsl_available ? "up" : "down"}"></span> Sistema: <strong>${escapeHtml(s.host_os)}</strong> · WSL ${s.wsl_available ? "detectado" : "no detectado"} · ${s.available_models.length} modelo(s) · email ${s.email_configured ? "configurado" : "sin configurar"}`;
+    applyWslHint();
+  } catch (e) { el("settings-msg").textContent = e.message; }
+}
+
+function applyWslHint() {
+  const mode = el("set-mode").value;
+  const hint = el("set-wsl-hint");
+  if (mode !== "wsl") { hint.textContent = ""; return; }
+  if (SETTINGS_INFO.wsl_available) hint.textContent = "WSL detectado en el host. Las herramientas se ejecutarán dentro de la distro indicada.";
+  else if (SETTINGS_INFO.host_os === "Windows") hint.innerHTML = "WSL no detectado: instala Kali con <code>scripts/install-kali-windows.ps1</code>.";
+  else hint.textContent = "Aviso: el host no es Windows y no se detecta 'wsl'. El modo WSL solo aplica en Windows.";
+}
+
+async function saveSettings() {
+  const body = {
+    default_ollama_model: el("set-model").value,
+    enable_pentest_tools: el("set-pentest").checked,
+    pentest_execution_mode: el("set-mode").value,
+    pentest_wsl_distro: el("set-distro").value.trim(),
+    pentest_wsl_user: el("set-wsl-user").value.trim(),
+    smtp_host: el("set-smtp-host").value.trim(),
+    smtp_port: parseInt(el("set-smtp-port").value, 10) || 587,
+    smtp_user: el("set-smtp-user").value.trim(),
+    smtp_from: el("set-smtp-from").value.trim(),
+    smtp_use_tls: el("set-smtp-tls").checked,
+    notify_email: el("set-notify").value.trim(),
+    company_name: el("set-company").value.trim(),
+    report_footer: el("set-report-footer").value.trim(),
+    report_logo_url: el("set-logo").value.trim(),
+  };
+  // Las contraseñas solo se envían si se escriben (vacío = no cambiar).
+  if (el("set-wsl-pass").value) body.pentest_wsl_password = el("set-wsl-pass").value;
+  if (el("set-smtp-pass").value) body.smtp_password = el("set-smtp-pass").value;
+  el("btn-save-settings").disabled = true;
+  try {
+    await api("/settings", { method: "PUT", body: JSON.stringify(body) });
+    el("settings-msg").textContent = "✓ Ajustes guardados.";
+    toast("Ajustes guardados.", "ok");
+    el("set-wsl-pass").value = ""; el("set-smtp-pass").value = "";
+    loadModels(); loadSettings();
+  } catch (e) { el("settings-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-save-settings").disabled = false; }
+}
+
+async function testEmail() {
+  const to = el("set-test-email").value.trim();
+  if (!to) return toast("Indica un email para la prueba.", "err");
+  el("btn-test-email").disabled = true;
+  try {
+    const r = await api("/settings/test-email", { method: "POST", body: JSON.stringify({ to }) });
+    toast(r.message, r.ok ? "ok" : "err");
+  } catch (e) { toast(e.message, "err"); }
+  finally { el("btn-test-email").disabled = false; }
+}
+
+// --------------------------------------------------------------------------
 // Init
 // --------------------------------------------------------------------------
 function setupSeg(segId, onChange) {
@@ -410,15 +1242,55 @@ function setupSeg(segId, onChange) {
 
 document.addEventListener("DOMContentLoaded", () => {
   buildNav();
-  setupSeg("mode-seg", (b) => el("agent-select-wrap").classList.toggle("hidden", b.dataset.mode !== "manual"));
+  setupSeg("mode-seg", applyMode);
+  setupSeg("team-seg", applyTeamKind);
   setupSeg("search-mode");
+  applyMode(); applyTeamKind();
 
   el("agent-select").addEventListener("change", updateAgentHint);
+  el("squad-select").addEventListener("change", updateSquadHint);
   el("btn-route").addEventListener("click", previewRoute);
   el("btn-execute").addEventListener("click", executeTask);
+
+  // Programador
+  el("sched-target-kind").addEventListener("change", applySchedTarget);
+  el("sched-kind").addEventListener("change", applySchedKind);
+  el("sched-connector").addEventListener("change", applySchedConnector);
+  el("btn-create-sched").addEventListener("click", createScheduledTask);
+  el("btn-refresh-sched").addEventListener("click", loadScheduler);
+  applySchedTarget(); applySchedKind(); applySchedConnector();
+
+  // Pentest
+  el("btn-pentest-run").addEventListener("click", runPentest);
+  el("pt-auto").addEventListener("change", applyPtMode);
+  el("pt-type").addEventListener("change", applyPtType);
+  el("btn-pt-recheck").addEventListener("click", recheckTools);
+  el("btn-pt-install").addEventListener("click", installTools);
+  el("btn-pt-scope-save").addEventListener("click", savePtScope);
+
+  // Subdominios
+  el("btn-sd-search").addEventListener("click", sdSearch);
+  el("btn-sd-extract").addEventListener("click", sdExtract);
+  el("btn-sd-resolve").addEventListener("click", sdResolve);
+  el("btn-sd-txt").addEventListener("click", () => sdExport("txt"));
+  el("btn-sd-csv").addEventListener("click", () => sdExport("csv"));
+  el("btn-sd-clear").addEventListener("click", sdClear);
+  el("sd-filter").addEventListener("input", sdRender);
+  el("sd-domain").addEventListener("keydown", (e) => { if (e.key === "Enter") sdSearch(); });
+
+  // Ajustes
+  el("btn-save-settings").addEventListener("click", saveSettings);
+  el("btn-test-email").addEventListener("click", testEmail);
+  el("set-mode").addEventListener("change", applyWslHint);
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);
+  el("btn-clear-failed").addEventListener("click", clearFailedExecutions);
+
+  // Informes
+  el("btn-reports-refresh").addEventListener("click", loadReports);
+  el("btn-reports-clear").addEventListener("click", async () => { await clearFailedExecutions(); loadReports(); });
+  el("reports-filter").addEventListener("input", renderReports);
   el("btn-detail-md").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=markdown`, "_blank"));
   el("btn-detail-html").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=html`, "_blank"));
   el("btn-upload").addEventListener("click", uploadDocument);
@@ -436,6 +1308,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => switchView(b.dataset.goto)));
 
-  loadHealth(); loadMetrics(); loadAgents(); loadModels(); loadTools();
+  loadHealth(); loadMetrics(); loadAgents(); loadSquads(); loadConnectors(); loadModels(); loadTools();
   setInterval(loadHealth, 30000);
 });

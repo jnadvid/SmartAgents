@@ -90,6 +90,9 @@ class BaseAgent:
     description: str = ""
     system_prompt: str = "Eres un asistente empresarial riguroso."
     allowed_tools: list[str] = []
+    # Acceso de LECTURA de datos: allow-list de conectores que el agente puede
+    # consultar (definido explícitamente por agente). Vacío = sin acceso externo.
+    data_access: list[str] = []
     default_model: str | None = None
     security_policy: str = "standard"
     max_steps: int = 8
@@ -240,10 +243,41 @@ class BaseAgent:
             "category": self.category,
             "description": self.description,
             "allowed_tools": list(self.allowed_tools),
+            "data_access": list(self.data_access),
             "default_model": self.default_model,
             "output_sections": list(self.output_format),
             "enabled": True,
         }
+
+
+_CODE_MARKERS = (
+    "def ", "class ", "import ", "function ", "const ", "let ", "=>", "public ",
+    "private ", "void ", "func ", "fn ", "#include", "return ", "self.", "->",
+    "println", "console.log", "</", "/>", "{", "};", "() {",
+)
+
+
+def looks_like_code(text: str) -> bool:
+    """Heurística compartida: ¿el texto parece código fuente?"""
+    if not text:
+        return False
+    if "```" in text:
+        return True
+    lowered = text.lower()
+    distinct = sum(1 for marker in _CODE_MARKERS if marker in lowered)
+    # Señal adicional: varias líneas indentadas o con punto y coma final.
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    indented = sum(1 for ln in lines if ln[:1] in (" ", "\t"))
+    semicolons = sum(1 for ln in lines if ln.rstrip().endswith((";", "{", "}", ":")))
+    return distinct >= 3 or (distinct >= 1 and (indented >= 3 or semicolons >= 3))
+
+
+def pick_code_text(ctx: "AgentContext") -> str | None:
+    """Devuelve el mejor candidato a 'código' entre el contexto y la tarea."""
+    for candidate in (ctx.extra_context or "", ctx.task or ""):
+        if candidate and looks_like_code(candidate):
+            return candidate
+    return None
 
 
 def looks_tabular(text: str) -> bool:

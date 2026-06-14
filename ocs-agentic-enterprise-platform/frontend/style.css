@@ -1,4 +1,4 @@
-/* OCS Agentic Enterprise Platform - UI Fase 2 (tema oscuro, sin dependencias) */
+/* OCS Agentic Enterprise Platform - UI Fase 3 (tema oscuro, sin dependencias) */
 
 :root {
   --bg: #0b0f15;
@@ -288,3 +288,100 @@ textarea.input { resize: vertical; }
   .nav { flex-direction: row; flex-wrap: wrap; }
   .sidebar-foot { border: none; flex-direction: row; }
 }
+
+/* ---------- Equipos (squads) y multi-selección ---------- */
+.btn.xs { padding: 3px 8px; font-size: 0.72rem; border-radius: 7px; }
+#squad-select-wrap { margin-top: 6px; }
+.checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-soft); border-radius: 10px; padding: 8px; background: var(--bg-2); }
+.chk-item { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text-dim); padding: 3px 4px; border-radius: 6px; cursor: pointer; }
+.chk-item:hover { background: var(--panel); color: var(--text); }
+.chk-item span:first-of-type { flex: 1; }
+.chk-cat { font-size: 0.66rem; color: var(--text-mute); }
+
+/* ---------- Vista Agentes ---------- */
+.agents-areas { display: flex; flex-direction: column; gap: 18px; margin-top: 12px; }
+.area-block > h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid var(--border-soft); padding-bottom: 6px; }
+.agent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.agent-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 11px; padding: 12px; }
+.agent-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.agent-card p { color: var(--text-dim); font-size: 0.78rem; margin: 7px 0; }
+.agent-tools { display: flex; flex-wrap: wrap; gap: 4px; }
+.squads-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 10px; }
+.squad-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; }
+.squad-card p { color: var(--text-dim); font-size: 0.8rem; margin: 8px 0; }
+.squad-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.chain-step { background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; padding: 3px 7px; font-size: 0.7rem; }
+.chain-arrow { color: var(--accent); font-weight: 700; }
+
+/* ---------- Programador ---------- */
+.sched-banner { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; color: var(--text-dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-mute); display: inline-block; }
+.status-dot.up { background: var(--ok); box-shadow: 0 0 0 3px rgba(45, 212, 167, 0.18); }
+.status-dot.down { background: var(--warn); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sched-actions { white-space: nowrap; }
+.sched-actions .btn { margin-left: 2px; }
+.sched-detail { margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.sched-detail h4 { margin-bottom: 4px; }
+
+/* ---------- Acceso de datos / conectores ---------- */
+.agent-access { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; align-items: center; }
+.access-chip { font-size: 0.66rem; padding: 2px 7px; border-radius: 6px; background: rgba(91, 140, 255, 0.14); border: 1px solid rgba(91, 140, 255, 0.35); color: #bcd0ff; }
+.input.mono { font-family: "Consolas", "SF Mono", ui-monospace, monospace; font-size: 0.8rem; }
+
+/* ---------- Pentest ---------- */
+.check-warn { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 9px 12px; border: 1px solid rgba(246, 181, 69, 0.5); background: rgba(246, 181, 69, 0.08); border-radius: 9px; font-size: 0.84rem; }
+.pt-tools { display: flex; flex-direction: column; gap: 10px; }
+.pt-tool { border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px; background: var(--bg-2); }
+.pt-tool-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.pt-tool-head strong { flex: 1; }
+.pt-output { margin: 6px 0 0; padding: 9px; background: #0a0e14; border: 1px solid var(--border-soft); border-radius: 8px; max-height: 280px; overflow: auto; font-family: "Consolas", ui-monospace, monospace; font-size: 0.74rem; white-space: pre-wrap; word-break: break-word; color: #cdd9e5; }
+.pt-findings-box { border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px; margin: 12px 0; background: var(--bg-2); }
+.pt-findings-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pt-findings-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.pt-findings-list li { font-size: 0.82rem; }
+.pt-tools-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tool-pill { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border-soft); background: var(--bg-2); color: var(--text-mute); }
+.tool-pill.ok { color: #bdf0dd; border-color: rgba(45, 212, 167, 0.4); }
+.tool-pill.no { color: var(--text-mute); }
+#pt-install-log { margin-top: 12px; max-height: 320px; }
+
+/* ---------- Progreso del pentest ---------- */
+#pt-progress { padding: 6px 2px; }
+.pt-prog-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.pt-prog-head strong { font-size: 0.95rem; }
+.pt-prog-bar { height: 9px; background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 999px; overflow: hidden; }
+.pt-prog-fill { display: block; height: 100%; width: var(--p, 0%); background: var(--grad); transition: width 0.5s ease; }
+#pt-prog-sub { font-size: 0.78rem; margin: 7px 0 12px; }
+.pt-timeline { display: flex; flex-direction: column; gap: 10px; }
+.tl-phase { border-left: 2px solid var(--border); padding-left: 10px; }
+.tl-phase-name { font-size: 0.74rem; color: var(--text-mute); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+.tl-steps { display: flex; flex-wrap: wrap; gap: 5px; }
+.tl-step { font-size: 0.72rem; padding: 3px 9px; border-radius: 7px; border: 1px solid var(--border-soft); background: var(--bg-2); color: var(--text-dim); }
+.tl-step.ok { background: rgba(45,212,167,0.14); border-color: rgba(45,212,167,0.4); color: #bdf0dd; }
+.tl-step.err { background: rgba(246,104,94,0.14); border-color: rgba(246,104,94,0.4); color: #ffc9c4; }
+.tl-step.warn { background: rgba(246,181,69,0.14); border-color: rgba(246,181,69,0.4); color: #ffe3ab; }
+.tl-step.no { opacity: 0.5; }
+.tl-step.run { background: rgba(91,140,255,0.18); border-color: var(--accent); color: #cfe0ff; animation: pulse 1.2s infinite; }
+
+/* ---------- Informes ---------- */
+.sm-input { display: inline-block; width: 160px; padding: 6px 10px; }
+.reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+.report-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 13px; }
+.report-card.pentest { border-color: rgba(91,140,255,0.45); box-shadow: inset 3px 0 0 var(--accent); }
+.report-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
+.report-head strong { flex: 1; font-size: 0.9rem; }
+.report-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+
+/* ---------- Subdominios (OSINT) ---------- */
+#sd-filter { margin: 10px 0; }
+.sd-table { display: flex; flex-direction: column; gap: 4px; max-height: 56vh; overflow-y: auto; }
+.sd-row { display: grid; grid-template-columns: minmax(180px, 1.6fr) 1.4fr auto; gap: 10px; align-items: center;
+  padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--bg-2); }
+.sd-name { font-size: 0.82rem; color: var(--text); word-break: break-all; }
+.sd-src { display: flex; flex-wrap: wrap; gap: 4px; }
+.src-chip { font-size: 0.68rem; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border-soft);
+  background: var(--bg-1); color: var(--text-mute); }
+.sd-dns { text-align: right; white-space: nowrap; }
+.badge.ok-badge { border-color: var(--ok); color: #7ef0d2; }
+.badge.dim-badge { opacity: 0.55; }

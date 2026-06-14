@@ -21,13 +21,16 @@ api/            routers HTTP (FastAPI) — validación Pydantic, errores 4xx/5xx
 services/       fachadas de caso de uso (AgentRunner, documentos, ejecuciones)
 orchestration/  IntentClassifier → TaskRouter → AgentPlanner → ExecutionEngine
                 → ResponseVerifier → ConfidenceScorer
-agents/         BaseAgent (ciclo común) + 16 agentes declarativos
-tools/          BaseTool (validación+timeout) + ToolRegistry + 19 herramientas
+agents/         BaseAgent (ciclo común) + 45 agentes declarativos + squads
+tools/          BaseTool (validación+timeout) + ToolRegistry + 24 herramientas
+connectors/     conectores de datos (Wazuh/JSON/CSV/HTTP) con allow-list por agente
+pentest/        herramientas de Kali (scope+autorización, sin-shell, opt-in)
+scheduler/      cálculo de fechas (once/interval/daily/weekly/cron) + hilo del programador
 llm/            BaseLLMProvider (contrato) + OllamaProvider + ModelRouter
 rag/            document_loader (TXT/MD/PDF) + chunker + retriever (keywords)
 audit/          ChainOfWorkRecorder (pasos + tool logs saneados)
 security/       auth opcional, políticas (allow-list, límites), sanitización
-models.py       8 tablas SQLite (SQLAlchemy 2.0)
+models.py       10 tablas SQLite (SQLAlchemy 2.0), incl. scheduled_tasks/runs
 ```
 
 ## Flujo de una ejecución

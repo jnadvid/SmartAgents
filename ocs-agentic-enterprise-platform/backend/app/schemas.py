@@ -65,6 +65,7 @@ class AgentInfo(BaseModel):
     category: str
     description: str
     allowed_tools: list[str]
+    data_access: list[str] = []
     default_model: str | None = None
     output_sections: list[str]
     enabled: bool = True
@@ -100,6 +101,28 @@ class ExecuteRequest(BaseModel):
     extra_context: str | None = Field(
         default=None, description="Contexto adicional opcional (texto pegado)"
     )
+
+
+class SquadInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    members: list[str]
+    mode: str = "pipeline"
+
+
+class SquadExecuteRequest(BaseModel):
+    task: str = Field(min_length=1, description="Tarea o instrucción para el equipo")
+    squad_name: str | None = Field(
+        default=None, description="Squad predefinido a usar (si null, se usa agent_names)"
+    )
+    agent_names: list[str] | None = Field(
+        default=None, description="Equipo ad-hoc: lista ordenada de agentes (2-8)"
+    )
+    model: str | None = Field(default=None, description="Modelo Ollama a usar")
+    use_documents: bool = Field(default=False, description="Usar documentos subidos (RAG)")
+    extra_context: str | None = Field(default=None, description="Contexto adicional opcional")
 
 
 class ToolResultSummary(BaseModel):
@@ -286,6 +309,328 @@ class MetricsSummary(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Programador de tareas (scheduler)
+# ---------------------------------------------------------------------------
+
+TargetKind = Literal["auto", "agent", "squad", "team"]
+ScheduleKind = Literal["once", "interval", "daily", "weekly", "cron"]
+
+
+class ScheduledTaskCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    task: str = Field(min_length=1, description="Instrucción a ejecutar")
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool = False
+
+    target_kind: TargetKind = "auto"
+    target_ref: str | None = Field(default=None, description="Agente o squad según target_kind")
+    agent_names: list[str] | None = Field(default=None, description="Equipo ad-hoc (target_kind=team)")
+
+    connector: str | None = Field(default=None, description="Conector de datos a leer antes de ejecutar")
+    connector_params: dict[str, Any] | None = Field(default=None, description="Parámetros del conector")
+
+    schedule_kind: ScheduleKind
+    run_at: datetime | None = Field(default=None, description="Momento exacto (once), en UTC si no lleva zona")
+    interval_minutes: int | None = Field(default=None, ge=1, le=525600)
+    time_of_day: str | None = Field(default=None, description="HH:MM para daily/weekly")
+    day_of_week: int | None = Field(default=None, ge=0, le=6, description="0=lunes … 6=domingo (weekly)")
+    cron: str | None = Field(default=None, description="Expresión cron de 5 campos")
+    timezone: str = Field(default="UTC", max_length=64)
+
+
+class ScheduledTaskUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=200)
+    task: str | None = None
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool | None = None
+    enabled: bool | None = None
+
+    target_kind: TargetKind | None = None
+    target_ref: str | None = None
+    agent_names: list[str] | None = None
+
+    connector: str | None = None
+    connector_params: dict[str, Any] | None = None
+
+    schedule_kind: ScheduleKind | None = None
+    run_at: datetime | None = None
+    interval_minutes: int | None = Field(default=None, ge=1, le=525600)
+    time_of_day: str | None = None
+    day_of_week: int | None = Field(default=None, ge=0, le=6)
+    cron: str | None = None
+    timezone: str | None = Field(default=None, max_length=64)
+
+
+class ScheduledRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    execution_id: int | None = None
+    status: str
+    message: str
+    started_at: datetime
+    finished_at: datetime | None = None
+
+
+class ScheduledTaskOut(BaseModel):
+    id: int
+    name: str
+    task: str
+    extra_context: str | None = None
+    model: str | None = None
+    use_documents: bool
+    target_kind: str
+    target_ref: str
+    agent_names: list[str]
+    connector: str | None = None
+    connector_params: dict[str, Any] = {}
+    schedule_kind: str
+    schedule_human: str
+    run_at: datetime | None = None
+    interval_minutes: int | None = None
+    time_of_day: str | None = None
+    day_of_week: int | None = None
+    cron: str | None = None
+    timezone: str
+    enabled: bool
+    status: str
+    next_run_at: datetime | None = None
+    last_run_at: datetime | None = None
+    last_status: str | None = None
+    last_execution_id: int | None = None
+    run_count: int
+    created_at: datetime
+
+
+class ScheduledTaskDetail(ScheduledTaskOut):
+    runs: list[ScheduledRunOut] = []
+
+
+class SchedulerStatusResponse(BaseModel):
+    enabled: bool
+    running: bool
+    poll_seconds: int
+    total_tasks: int
+    active_tasks: int
+    next_run_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# Conectores de datos
+# ---------------------------------------------------------------------------
+
+
+class ConnectorInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    requires_network: bool
+    enabled: bool
+    input_schema: dict[str, Any]
+
+
+class ConnectorCategoriesResponse(BaseModel):
+    categories: dict[str, list[str]]
+
+
+class ConnectorReadRequest(BaseModel):
+    params: dict[str, Any] = Field(default_factory=dict)
+    max_records: int = Field(default=20, ge=1, le=200, description="Máximo de registros a devolver en la vista previa")
+
+
+class ConnectorReadResponse(BaseModel):
+    connector: str
+    status: str
+    count: int
+    summary: str = ""
+    source: str = ""
+    records: list[dict[str, Any]] = []
+    error_message: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Ajustes editables (runtime)
+# ---------------------------------------------------------------------------
+
+
+class SettingsOut(BaseModel):
+    default_ollama_model: str
+    enable_pentest_tools: bool
+    pentest_scope_allowlist: str
+    pentest_execution_mode: str
+    pentest_wsl_distro: str
+    pentest_wsl_user: str
+    pentest_wsl_password_set: bool = False
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_from: str
+    smtp_use_tls: bool
+    smtp_password_set: bool = False
+    notify_email: str
+    company_name: str = ""
+    report_logo_url: str = ""
+    report_footer: str = ""
+    host_os: str
+    wsl_available: bool
+    wsl_distros: list[str] = []
+    email_configured: bool = False
+    available_models: list[str] = []
+
+
+class SettingsUpdate(BaseModel):
+    default_ollama_model: str | None = None
+    enable_pentest_tools: bool | None = None
+    pentest_scope_allowlist: str | None = None
+    pentest_execution_mode: Literal["auto", "native", "wsl"] | None = None
+    pentest_wsl_distro: str | None = None
+    pentest_wsl_user: str | None = None
+    pentest_wsl_password: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool | None = None
+    notify_email: str | None = None
+    company_name: str | None = None
+    report_logo_url: str | None = None
+    report_footer: str | None = None
+
+
+class EmailTestRequest(BaseModel):
+    to: str = Field(min_length=3, description="Destinatario de la prueba")
+
+
+# ---------------------------------------------------------------------------
+# Pentesting (herramientas de Kali, autorizado)
+# ---------------------------------------------------------------------------
+
+
+class PentestToolInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    binary: str
+    intrusive: bool
+    available: bool
+
+
+class PentestStatusResponse(BaseModel):
+    enabled: bool
+    scope_configured: bool
+    scope_count: int
+    scope_allowlist: str = ""  # alcance autorizado en bruto (editable desde la pestaña Pentesting)
+    execution_mode: str = "native"
+    wsl_distro: str = "kali-linux"
+    mode_ok: bool = True
+    mode_check: str = ""
+    wordlists: list[str] = []
+    profiles: dict[str, list[str]]
+    pentest_types: dict[str, dict[str, str]] = {}
+    tools: list[PentestToolInfo]
+
+
+class PentestRunRequest(BaseModel):
+    target: str = Field(min_length=1, max_length=2000, description="URL o host AUTORIZADO a escanear")
+    authorized: bool = Field(default=False, description="Confirmas tener autorización para el objetivo")
+    profile: Literal["recon", "web", "full"] = "recon"
+    tools: list[str] | None = Field(default=None, description="Herramientas concretas (anula el perfil)")
+    options: dict[str, Any] = Field(default_factory=dict, description="Opciones por herramienta (ports, wordlist…)")
+    agent_name: str = Field(default="web_pentester", description="Agente de ciberseguridad que analiza")
+    model: str | None = None
+    email_to: str | None = Field(default=None, description="Si se indica, envía el informe a este email")
+
+
+class PentestAutoRequest(BaseModel):
+    target: str = Field(min_length=1, max_length=2000, description="URL o host AUTORIZADO")
+    authorized: bool = Field(default=False, description="Confirmas tener autorización para el objetivo")
+    pentest_type: Literal["web", "network", "active_directory", "api", "external", "ot"] = "web"
+    aggressive: bool = Field(default=False, description="Incluye fases activas (NSE vuln, sqlmap)")
+    options: dict[str, Any] = Field(default_factory=dict)
+    agent_name: str = Field(default="pentest_lead", description="Agente de ciberseguridad que redacta el informe")
+    model: str | None = None
+    email_to: str | None = Field(default=None, description="Si se indica, envía el informe a este email")
+
+
+class PentestToolResultOut(BaseModel):
+    tool_name: str
+    status: str
+    phase: str = ""
+    summary: str = ""
+    command: str = ""
+    returncode: int | None = None
+    duration_ms: int = 0
+    output: str = ""
+
+
+class FindingOut(BaseModel):
+    tool: str
+    severity: str
+    title: str
+    cve: str = ""
+    score: float = 0.0
+
+
+class InstallStatusResponse(BaseModel):
+    running: bool
+    returncode: int | None = None
+    started_at: float | None = None
+    finished_at: float | None = None
+    mode: str = ""
+    log: str = ""
+
+
+class StepProgressOut(BaseModel):
+    tool: str
+    phase: str
+    status: str
+    duration_ms: int = 0
+
+
+class PentestRunResponse(BaseModel):
+    target: str
+    host: str
+    status: str
+    message: str
+    profile: str = ""
+    tools: list[PentestToolResultOut] = []
+    findings: list[FindingOut] = []
+    findings_by_severity: dict[str, int] = {}
+    max_severity: str = "info"
+    execution: ExecutionResponse | None = None
+    emailed: bool = False
+    email_message: str | None = None
+
+
+class PentestProgressResponse(BaseModel):
+    running: bool
+    status: str  # idle | running | completed | error
+    stage: str = ""
+    target: str = ""
+    kind: str = ""
+    total: int = 0
+    done: int = 0
+    percent: int = 0
+    current_tool: str = ""
+    current_phase: str = ""
+    steps: list[StepProgressOut] = []
+    findings_by_severity: dict[str, int] = {}
+    max_severity: str = "info"
+    result: PentestRunResponse | None = None
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Herramientas
+# ---------------------------------------------------------------------------
+
+
 class ToolInfo(BaseModel):
     name: str
     category: str
@@ -301,3 +646,52 @@ class ToolCategoriesResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+# ---------------------------------------------------------------------------
+# Subdominios (OSINT)
+# ---------------------------------------------------------------------------
+
+
+class SubdomainItem(BaseModel):
+    name: str
+    sources: list[str] = []
+    resolved: bool | None = None
+    ip: str | None = None
+
+
+class SubdomainSourceInfo(BaseModel):
+    source: str
+    count: int
+    ok: bool
+    detail: str = ""
+
+
+class SubdomainEnumerateRequest(BaseModel):
+    domain: str = Field(min_length=1, max_length=253, description="Dominio raíz (sin esquema)")
+    use_tools: bool = Field(default=True, description="Usar herramientas de Kali si están instaladas")
+    use_amass: bool = Field(default=False, description="Incluir amass pasivo (más lento)")
+    resolve: bool = Field(default=False, description="Resolver por DNS qué subdominios están vivos")
+
+
+class SubdomainScanResponse(BaseModel):
+    domain: str
+    total: int
+    sources: list[SubdomainSourceInfo] = []
+    subdomains: list[SubdomainItem] = []
+
+
+class SubdomainToolInfo(BaseModel):
+    name: str
+    available: bool
+
+
+class SubdomainStatusResponse(BaseModel):
+    execution_mode: str
+    pentest_enabled: bool
+    tools: list[SubdomainToolInfo] = []
+
+
+class SubdomainResolveRequest(BaseModel):
+    domain: str = Field(min_length=1, max_length=253)
+    names: list[str] = Field(default_factory=list, max_length=5000)

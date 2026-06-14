@@ -76,9 +76,16 @@ class ToolRegistry:
 
 
 def build_default_registry() -> ToolRegistry:
-    """Construye el registro con las 19 herramientas del MVP."""
+    """Construye el registro con las 24 herramientas (19 base + 5 de programación)."""
     # Imports locales para evitar ciclos de importación.
     from app.tools.business_tools import ClassifyCustomerRequestTool, ExtractRisksTool
+    from app.tools.code_tools import (
+        AnalyzeCodeStructureTool,
+        ExtractCodeTodosTool,
+        GenerateTestSkeletonTool,
+        ReviewCodeQualityTool,
+        ScanCodeSecurityTool,
+    )
     from app.tools.compliance_tools import GenerateComplianceGapTool
     from app.tools.cyber_tools import (
         CalculateCvssPriorityTool,
@@ -133,6 +140,12 @@ def build_default_registry() -> ToolRegistry:
             GenerateComplianceGapTool(),
             # Seguridad de prompts
             CheckPromptInjectionPatternsTool(),
+            # Programación (análisis estático determinista, sin ejecución)
+            AnalyzeCodeStructureTool(),
+            ReviewCodeQualityTool(),
+            ScanCodeSecurityTool(),
+            GenerateTestSkeletonTool(),
+            ExtractCodeTodosTool(),
         ]
     )
     return registry

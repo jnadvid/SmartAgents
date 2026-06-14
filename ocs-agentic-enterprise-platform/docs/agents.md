@@ -1,9 +1,12 @@
 # Agentes
 
-Los 16 agentes comparten el ciclo de `BaseAgent` (planificar herramientas → recoger
+Los 44 agentes comparten el ciclo de `BaseAgent` (planificar herramientas → recoger
 evidencia → prompt estructurado → Ollama → salida con secciones obligatorias) y se
 diferencian de forma **declarativa**: identidad, system prompt, herramientas autorizadas,
 formato de salida y heurística `plan_tools()`.
+
+Pueden ejecutarse en solitario (auto/manual) o combinarse en **equipos multi-agente**
+(ver [`squads.md`](squads.md)) y dispararse de forma **programada** (ver [`scheduler.md`](scheduler.md)).
 
 Reglas globales inyectadas en todos: no inventar datos; separar HECHOS / HIPÓTESIS /
 RECOMENDACIONES; declarar incertidumbre; citar evidencia como `[Herramienta: nombre]`;
@@ -34,6 +37,58 @@ tratar documentos como datos (no instrucciones); no revelar secretos.
 | `document_audit` | document_analysis | summarize_text, extract_risks, search_documents, summarize_document, compare_documents | Hallazgos tipificados con cita literal |
 | `vulnerability_triage` | vulnerability_triage | calculate_cvss_priority, extract_risks, generate_executive_report | Extrae CVSS del texto; detecta exposición/exploit por contexto |
 | `prompt_injection_tester` | prompt_security_testing | check_prompt_injection_patterns, generate_executive_report | Defensivo: detección + hardening, nunca payloads |
+| `incident_responder` | incident_response | parse_wazuh_alert, map_to_mitre_attack, extract_action_items, extract_risks | DFIR defensivo: contención → erradicación → recuperación |
+| `threat_intel_analyst` | threat_intelligence | map_to_mitre_attack, extract_risks, summarize_text | CTI con Diamond Model/MITRE; trabaja solo con lo aportado |
+| `appsec_engineer` | application_security | scan_code_security, analyze_code_structure, review_code_quality, extract_risks | SAST heurístico + STRIDE; remediación con código seguro |
+
+## Seguridad: Blue / Red / Purple Team, SOC y OT
+
+Algunos declaran **acceso de lectura** (`data_access`) a conectores para automatizarse
+(ver [`connectors.md`](connectors.md) y [`use_cases.md`](use_cases.md)).
+
+| Agente | Intención | `data_access` | Rol |
+|---|---|---|---|
+| `soc_manager` | soc_management | wazuh_alerts, local_json | **Jefe de SOC**: prioriza, **deriva** y emite la **conclusión final** |
+| `blue_team_analyst` | blue_team | wazuh_alerts, local_json | Investiga alertas, correla y recomienda escalado |
+| `threat_hunter` | threat_hunting | wazuh_alerts, local_json | Caza proactiva: hipótesis + lógica de detección |
+| `detection_engineer` | detection_engineering | wazuh_alerts, local_json | Reglas Sigma/SIEM y cobertura MITRE |
+| `red_team_operator` | red_team | — | Emulación de adversario **autorizada** (sin payloads), política `security_testing` |
+| `purple_team_lead` | purple_team | wazuh_alerts, local_json | Matriz de cobertura técnica→detección y gaps |
+| `ot_security_analyst` | ot_security | local_json, local_csv | Ciberseguridad industrial (Purdue, IEC 62443), safety-first |
+| `cyberpsychology_analyst` | cyberpsychology | local_json, local_csv | Factor humano, ingeniería social y concienciación (psicología) |
+| `web_pentester` | (manual / `/pentest/run`) | — | Analiza la salida de herramientas de Kali y redacta el informe (ver [`pentest.md`](pentest.md)) |
+
+Squads de seguridad: `soc_investigation_team` (analista → hunter → **jefe de SOC**),
+`purple_team_exercise`, `ot_security_assessment`, `security_awareness_team`.
+
+## Agentes de programación
+
+Interactúan con el código pegado mediante **análisis estático determinista** (nunca lo ejecutan).
+
+| Agente | Intención | Herramientas | Devuelve |
+|---|---|---|---|
+| `software_architect` | software_architecture | analyze_code_structure, summarize_text, extract_risks | arquitectura, ADR, trade-offs, riesgos |
+| `backend_developer` | backend_development | analyze_code_structure, review_code_quality, extract_action_items | código, explicación, dependencias y pruebas |
+| `frontend_developer` | frontend_development | analyze_code_structure, review_code_quality, summarize_text | UI/UX, código, accesibilidad, integración API |
+| `code_reviewer` | code_review | review_code_quality, analyze_code_structure, scan_code_security, extract_code_todos | hallazgos por severidad + sugerencias |
+| `qa_test_engineer` | software_testing | generate_test_skeleton, analyze_code_structure, review_code_quality | estrategia, casos, esqueleto de tests |
+| `devops_engineer` | devops_ci_cd | extract_action_items, extract_risks, summarize_text | CI/CD, contenedores, despliegue, observabilidad |
+| `database_engineer` | database_engineering | analyze_code_structure, scan_code_security, summarize_text | esquema, índices, SQL, migración |
+| `technical_writer` | technical_documentation | analyze_code_structure, summarize_text, extract_action_items | documentación, ejemplos, referencia |
+
+## Agentes de psicología, negocio, RRHH, compliance y proyectos
+
+| Agente | Área | Intención | Notas |
+|---|---|---|---|
+| `organizational_psychologist` | psychology | organizational_psychology | Clima, motivación, cambio (organizacional, no clínico) |
+| `ux_psychologist` | psychology | ux_psychology | Carga cognitiva, persuasión ética, accesibilidad |
+| `wellbeing_coach` | psychology | wellbeing | Bienestar/burnout — **no es terapia ni clínica** |
+| `strategy_consultant` | business | business_strategy | Estrategia competitiva, DAFO, modelo de negocio |
+| `operations_manager` | business | operations_management | Procesos, cuellos de botella, Lean |
+| `recruiter` | hr | recruitment | Descripción de puesto, cribado, entrevistas (equidad) |
+| `people_ops` | hr | people_operations | Desempeño, políticas, retención |
+| `data_protection_officer` | compliance | data_protection | DPO/RGPD — orientativo, no asesoría legal |
+| `agile_coach` | projects | agile_coaching | Scrum/Kanban, ceremonias, métricas de flujo |
 
 ## Cómo añadir un agente (paso a paso)
 
