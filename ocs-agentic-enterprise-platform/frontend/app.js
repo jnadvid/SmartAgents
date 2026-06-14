@@ -20,6 +20,7 @@ const ICONS = {
   scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
   pentest: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.06-.33.1-.66.1-1z"/></svg>',
+  reports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
 };
 
 const VIEWS = [
@@ -27,6 +28,7 @@ const VIEWS = [
   { id: "assistant", label: "Asistente", sub: "Lanza una tarea a un agente o equipo" },
   { id: "agents", label: "Agentes", sub: "Catálogo por áreas y equipos" },
   { id: "executions", label: "Ejecuciones", sub: "Histórico y trazabilidad" },
+  { id: "reports", label: "Informes", sub: "Informes completos: descarga y borrado" },
   { id: "scheduler", label: "Programador", sub: "Tareas puntuales y periódicas" },
   { id: "pentest", label: "Pentest", sub: "Escaneo autorizado con Kali" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
@@ -145,6 +147,7 @@ function switchView(id) {
   if (id === "dashboard") loadMetrics();
   if (id === "agents") loadAgentsView();
   if (id === "executions") loadExecutions();
+  if (id === "reports") loadReports();
   if (id === "scheduler") loadScheduler();
   if (id === "pentest") loadPentest();
   if (id === "settings") loadSettings();
@@ -508,6 +511,58 @@ async function clearFailedExecutions() {
     const r = await api("/executions?status=failed", { method: "DELETE" });
     toast(`${r.deleted} ejecución(es) borrada(s).`, "ok");
     loadExecutions();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// --------------------------------------------------------------------------
+// Informes
+// --------------------------------------------------------------------------
+let REPORTS = [];
+const PENTEST_AGENTS = ["web_pentester", "pentest_lead"];
+
+async function loadReports() {
+  try { REPORTS = await api("/executions?limit=200"); renderReports(); }
+  catch (e) { el("reports-list").innerHTML = `<div class="muted">${escapeHtml(e.message)}</div>`; }
+}
+
+function renderReports() {
+  const q = (el("reports-filter").value || "").toLowerCase();
+  const items = REPORTS
+    .filter((e) => e.status === "completed" || e.status === "completed_with_warnings")
+    .filter((e) => !q || `${e.agent_name} ${e.intent} #${e.id}`.toLowerCase().includes(q));
+  el("reports-count").textContent = `· ${items.length}`;
+  if (!items.length) { el("reports-list").innerHTML = '<div class="chart-empty">No hay informes todavía.</div>'; return; }
+  el("reports-list").innerHTML = items.map((e) => {
+    const isPentest = PENTEST_AGENTS.includes(e.agent_name);
+    const conf = e.confidence_score != null ? Math.round(e.confidence_score * 100) + "%" : "—";
+    return `<div class="report-card ${isPentest ? "pentest" : ""}">
+      <div class="report-head"><strong>${isPentest ? "🛡️ " : "📄 "}${escapeHtml(e.agent_name)}</strong>
+        ${statusBadge(e.status)}<span class="badge">${conf}</span></div>
+      <div class="doc-meta">#${e.id} · ${escapeHtml(e.intent || "—")} · ${new Date(e.created_at).toLocaleString()}</div>
+      <div class="report-actions">
+        <button class="btn ghost xs" data-rep-view="${e.id}">Ver</button>
+        ${isPentest ? `<button class="btn ghost xs" data-rep-pdf="${e.id}">🛡 Informe</button>` : ""}
+        <button class="btn ghost xs" data-rep-md="${e.id}">⬇ MD</button>
+        <button class="btn ghost xs" data-rep-html="${e.id}">⬇ HTML</button>
+        <button class="btn ghost xs" data-rep-del="${e.id}">🗑</button>
+      </div></div>`;
+  }).join("");
+  const grid = el("reports-list");
+  grid.querySelectorAll("[data-rep-view]").forEach((b) => b.addEventListener("click", () => { switchView("executions"); showExecutionDetail(b.dataset.repView); }));
+  grid.querySelectorAll("[data-rep-pdf]").forEach((b) => b.addEventListener("click", () => window.open(`/pentest/report/${b.dataset.repPdf}`, "_blank")));
+  grid.querySelectorAll("[data-rep-md]").forEach((b) => b.addEventListener("click", () => window.open(`/executions/${b.dataset.repMd}/export?format=markdown`, "_blank")));
+  grid.querySelectorAll("[data-rep-html]").forEach((b) => b.addEventListener("click", () => window.open(`/executions/${b.dataset.repHtml}/export?format=html`, "_blank")));
+  grid.querySelectorAll("[data-rep-del]").forEach((b) => b.addEventListener("click", () => deleteReport(b.dataset.repDel)));
+}
+
+async function deleteReport(id) {
+  if (!confirm(`¿Borrar el informe #${id}?`)) return;
+  try {
+    const res = await fetch(`/executions/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    toast("Informe borrado.", "ok");
+    REPORTS = REPORTS.filter((e) => String(e.id) !== String(id));
+    renderReports();
   } catch (e) { toast(e.message, "err"); }
 }
 
@@ -1055,6 +1110,11 @@ document.addEventListener("DOMContentLoaded", () => {
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);
   el("btn-clear-failed").addEventListener("click", clearFailedExecutions);
+
+  // Informes
+  el("btn-reports-refresh").addEventListener("click", loadReports);
+  el("btn-reports-clear").addEventListener("click", async () => { await clearFailedExecutions(); loadReports(); });
+  el("reports-filter").addEventListener("input", renderReports);
   el("btn-detail-md").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=markdown`, "_blank"));
   el("btn-detail-html").addEventListener("click", () => window.open(`/executions/${el("execution-detail").dataset.exec}/export?format=html`, "_blank"));
   el("btn-upload").addEventListener("click", uploadDocument);

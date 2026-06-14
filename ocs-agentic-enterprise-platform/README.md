@@ -304,6 +304,7 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | POST | `/pentest/auto` | Pentest autónomo por fases (PTES/OWASP) + email opcional |
 | POST | `/pentest/recheck` · `/pentest/tools/install` | Comprobar / instalar herramientas (con log) |
 | GET | `/pentest/report/{id}` | Informe corporativo (HTML con portada y logo) |
+| POST | `/pentest/start` · `/pentest/start-auto` · GET `/pentest/progress` | Pentest async con progreso en vivo |
 | GET/PUT | `/settings` · POST `/settings/test-email` | Ajustes (modelo, pentest, WSL, SMTP) y prueba de email |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
 | DELETE | `/executions/{id}` · `/executions?status=failed` | Borrar una ejecución o limpiar por estado |
@@ -390,7 +391,7 @@ ocs-agentic-enterprise-platform/
     runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 155 tests
+    tests/            # 156 tests
   scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)

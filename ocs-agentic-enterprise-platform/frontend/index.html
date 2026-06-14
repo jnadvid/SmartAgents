@@ -23,7 +23,7 @@
       <div class="sidebar-foot">
         <div class="status-line" id="status-api"><span class="dot"></span><span class="status-label">API</span><span class="status-val">…</span></div>
         <div class="status-line" id="status-ollama"><span class="dot"></span><span class="status-label">Ollama</span><span class="status-val">…</span></div>
-        <div class="version">v0.10 · Fase 3 · 100% local</div>
+        <div class="version">v0.11 · Fase 3 · 100% local</div>
       </div>
     </aside>
 
@@ -204,6 +204,22 @@
           <div class="result-output markdown" id="execution-detail-output"></div>
           <details class="acc" open><summary>🧭 Chain-of-Work</summary>
             <ol id="execution-detail-cow" class="cow"></ol></details>
+        </div>
+      </section>
+
+      <!-- ===== INFORMES ===== -->
+      <section class="view" id="view-reports">
+        <div class="card">
+          <div class="card-head">
+            <h3>Informes completos <span class="muted" id="reports-count"></span></h3>
+            <div>
+              <input id="reports-filter" class="input sm-input" placeholder="filtrar…" />
+              <button id="btn-reports-refresh" class="btn ghost sm">↻ Actualizar</button>
+              <button id="btn-reports-clear" class="btn ghost sm">🧹 Borrar fallidos</button>
+            </div>
+          </div>
+          <p class="muted">Todos tus informes (ejecuciones completas), incluidos los de pentesting. Descárgalos o bórralos.</p>
+          <div id="reports-list" class="reports-grid"></div>
         </div>
       </section>
 

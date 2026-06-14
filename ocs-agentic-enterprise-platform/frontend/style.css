@@ -363,3 +363,12 @@ textarea.input { resize: vertical; }
 .tl-step.warn { background: rgba(246,181,69,0.14); border-color: rgba(246,181,69,0.4); color: #ffe3ab; }
 .tl-step.no { opacity: 0.5; }
 .tl-step.run { background: rgba(91,140,255,0.18); border-color: var(--accent); color: #cfe0ff; animation: pulse 1.2s infinite; }
+
+/* ---------- Informes ---------- */
+.sm-input { display: inline-block; width: 160px; padding: 6px 10px; }
+.reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+.report-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 13px; }
+.report-card.pentest { border-color: rgba(91,140,255,0.45); box-shadow: inset 3px 0 0 var(--accent); }
+.report-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 4px; }
+.report-head strong { flex: 1; font-size: 0.9rem; }
+.report-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
