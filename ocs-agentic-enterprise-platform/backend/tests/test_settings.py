@@ -57,6 +57,14 @@ def test_wsl_command_includes_user(monkeypatch) -> None:
     assert argv[:5] == ["wsl", "-d", "kali-linux", "-u", "kali"]
 
 
+def test_check_many_and_probe_native() -> None:
+    # En nativo, check_many usa el PATH del host (sin subprocess de WSL).
+    res = runners.check_many(RunContext(mode="native"), ["true", "binario_inexistente_xyz"])
+    assert res["true"] is True and res["binario_inexistente_xyz"] is False
+    ok, msg = runners.probe_environment(RunContext(mode="native"))
+    assert ok is True and "nativo" in msg.lower()
+
+
 def test_secrets_never_exposed(db_session) -> None:
     runtime_config.persist(db_session, {"smtp_password": "supersecreta", "smtp_host": "smtp.x", "smtp_from": "a@b.com"})
     public = runtime_config.public_effective()

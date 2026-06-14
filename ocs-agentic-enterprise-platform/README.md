@@ -391,7 +391,7 @@ ocs-agentic-enterprise-platform/
     runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 156 tests
+    tests/            # 157 tests
   scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)

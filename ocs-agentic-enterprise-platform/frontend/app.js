@@ -815,12 +815,13 @@ async function loadPentest() {
     el("pt-wordlist").innerHTML = '<option value="">(por defecto)</option>' +
       (s.wordlists || []).map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w.split("/").pop())}</option>`).join("");
     renderToolsGrid(s.tools);
-    const dot = s.enabled && s.scope_configured ? "up" : "down";
+    const dot = s.enabled && s.scope_configured && s.mode_ok ? "up" : "down";
     let msg;
     if (!s.enabled) msg = "Pentest DESACTIVADO. Actívalo en Ajustes (o ENABLE_PENTEST_TOOLS).";
     else if (!s.scope_configured) msg = "Sin alcance autorizado: defínelo en Ajustes (alcance autorizado).";
     else msg = `Activo · modo ${s.execution_mode} · ${s.scope_count} en alcance · ${avail.length}/${s.tools.length} herramientas instaladas`;
-    el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}`;
+    const diag = s.mode_check ? `<div class="muted" style="margin-top:4px">${s.mode_ok ? "✓" : "⚠"} ${escapeHtml(s.mode_check)}</div>` : "";
+    el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}${diag}`;
   } catch (e) { el("pentest-status").textContent = ""; }
 }
 

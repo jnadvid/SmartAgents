@@ -526,6 +526,8 @@ class PentestStatusResponse(BaseModel):
     scope_count: int
     execution_mode: str = "native"
     wsl_distro: str = "kali-linux"
+    mode_ok: bool = True
+    mode_check: str = ""
     wordlists: list[str] = []
     profiles: dict[str, list[str]]
     tools: list[PentestToolInfo]
