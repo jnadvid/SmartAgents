@@ -340,3 +340,8 @@ textarea.input { resize: vertical; }
 .pt-findings-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
 .pt-findings-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
 .pt-findings-list li { font-size: 0.82rem; }
+.pt-tools-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tool-pill { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border-soft); background: var(--bg-2); color: var(--text-mute); }
+.tool-pill.ok { color: #bdf0dd; border-color: rgba(45, 212, 167, 0.4); }
+.tool-pill.no { color: var(--text-mute); }
+#pt-install-log { margin-top: 12px; max-height: 320px; }

@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     notify_email: str = ""  # destinatario por defecto
 
+    # Marca para los informes corporativos (portada/email)
+    company_name: str = ""
+    report_logo_url: str = ""  # URL http(s) o data URI del logo
+    report_footer: str = ""
+
     # RAG
     rag_chunk_size: int = 1200
     rag_chunk_overlap: int = 150

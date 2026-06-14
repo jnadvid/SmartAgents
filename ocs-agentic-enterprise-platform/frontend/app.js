@@ -759,6 +759,7 @@ async function loadPentest() {
     const avail = s.tools.filter((t) => t.available).map((t) => t.name);
     el("pt-wordlist").innerHTML = '<option value="">(por defecto)</option>' +
       (s.wordlists || []).map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w.split("/").pop())}</option>`).join("");
+    renderToolsGrid(s.tools);
     const dot = s.enabled && s.scope_configured ? "up" : "down";
     let msg;
     if (!s.enabled) msg = "Pentest DESACTIVADO. Actívalo en Ajustes (o ENABLE_PENTEST_TOOLS).";
@@ -773,6 +774,49 @@ function applyPtMode() {
   el("pt-profile-wrap").classList.toggle("hidden", auto);
   el("pt-aggressive-wrap").classList.toggle("hidden", !auto);
   if (auto && [...el("pt-agent").options].some((o) => o.value === "pentest_lead")) el("pt-agent").value = "pentest_lead";
+}
+
+function renderToolsGrid(tools) {
+  const grid = el("pt-tools-grid");
+  if (!grid || !tools) return;
+  const inst = tools.filter((t) => t.available).length;
+  el("pt-tools-count").textContent = `· ${inst}/${tools.length} instaladas`;
+  grid.innerHTML = tools.map((t) =>
+    `<span class="tool-pill ${t.available ? "ok" : "no"}" title="${escapeHtml(t.binary)}">${t.available ? "●" : "○"} ${escapeHtml(t.name)}</span>`).join("");
+}
+
+async function recheckTools() {
+  el("btn-pt-recheck").disabled = true;
+  try { const s = await api("/pentest/recheck", { method: "POST" }); renderToolsGrid(s.tools); toast("Herramientas comprobadas.", "ok"); }
+  catch (e) { toast(e.message, "err"); }
+  finally { el("btn-pt-recheck").disabled = false; }
+}
+
+let PT_INSTALL_TIMER = null;
+async function installTools() {
+  if (!confirm("Esto instalará/actualizará las herramientas de Kali (puede tardar varios minutos). ¿Continuar?")) return;
+  el("btn-pt-install").disabled = true;
+  el("pt-install-log").classList.remove("hidden");
+  el("pt-install-log").textContent = "Iniciando…";
+  try {
+    await api("/pentest/tools/install", { method: "POST" });
+    clearInterval(PT_INSTALL_TIMER);
+    PT_INSTALL_TIMER = setInterval(pollInstall, 2500);
+  } catch (e) { toast(e.message, "err"); el("btn-pt-install").disabled = false; }
+}
+
+async function pollInstall() {
+  try {
+    const s = await api("/pentest/tools/install/status");
+    el("pt-install-log").textContent = s.log || "(sin salida todavía)";
+    el("pt-install-log").scrollTop = el("pt-install-log").scrollHeight;
+    if (!s.running) {
+      clearInterval(PT_INSTALL_TIMER);
+      el("btn-pt-install").disabled = false;
+      toast(`Instalación finalizada (código ${s.returncode}).`, s.returncode === 0 ? "ok" : "warn");
+      recheckTools();
+    }
+  } catch (_) {}
 }
 
 async function runPentest() {
@@ -820,7 +864,12 @@ function renderPentest(r) {
   el("pt-report").innerHTML = r.execution && r.execution.final_output
     ? renderMarkdown(r.execution.final_output)
     : `<p class="muted">${escapeHtml(r.status === "completed" ? "Sin informe." : r.message)}</p>`;
-  if (r.execution && r.execution.execution_id) LAST_EXECUTION_ID = r.execution.execution_id;
+  const reportBtn = el("btn-pt-report");
+  if (r.execution && r.execution.execution_id) {
+    LAST_EXECUTION_ID = r.execution.execution_id;
+    reportBtn.classList.remove("hidden");
+    reportBtn.onclick = () => window.open(`/pentest/report/${r.execution.execution_id}`, "_blank");
+  } else reportBtn.classList.add("hidden");
 }
 
 const SEV_KIND = { critical: "err", high: "err", medium: "warn", low: "", info: "" };
@@ -868,6 +917,9 @@ async function loadSettings() {
     el("set-smtp-tls").checked = s.smtp_use_tls;
     el("set-notify").value = s.notify_email || "";
     el("set-test-email").value = s.notify_email || "";
+    el("set-company").value = s.company_name || "";
+    el("set-report-footer").value = s.report_footer || "";
+    el("set-logo").value = s.report_logo_url || "";
     el("settings-host").innerHTML = `<span class="status-dot ${s.wsl_available ? "up" : "down"}"></span> Sistema: <strong>${escapeHtml(s.host_os)}</strong> · WSL ${s.wsl_available ? "detectado" : "no detectado"} · ${s.available_models.length} modelo(s) · email ${s.email_configured ? "configurado" : "sin configurar"}`;
     applyWslHint();
   } catch (e) { el("settings-msg").textContent = e.message; }
@@ -896,6 +948,9 @@ async function saveSettings() {
     smtp_from: el("set-smtp-from").value.trim(),
     smtp_use_tls: el("set-smtp-tls").checked,
     notify_email: el("set-notify").value.trim(),
+    company_name: el("set-company").value.trim(),
+    report_footer: el("set-report-footer").value.trim(),
+    report_logo_url: el("set-logo").value.trim(),
   };
   // Las contraseñas solo se envían si se escriben (vacío = no cambiar).
   if (el("set-wsl-pass").value) body.pentest_wsl_password = el("set-wsl-pass").value;
@@ -955,6 +1010,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Pentest
   el("btn-pentest-run").addEventListener("click", runPentest);
   el("pt-auto").addEventListener("change", applyPtMode);
+  el("btn-pt-recheck").addEventListener("click", recheckTools);
+  el("btn-pt-install").addEventListener("click", installTools);
 
   // Ajustes
   el("btn-save-settings").addEventListener("click", saveSettings);

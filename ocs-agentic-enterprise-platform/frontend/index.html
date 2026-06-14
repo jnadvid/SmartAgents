@@ -23,7 +23,7 @@
       <div class="sidebar-foot">
         <div class="status-line" id="status-api"><span class="dot"></span><span class="status-label">API</span><span class="status-val">…</span></div>
         <div class="status-line" id="status-ollama"><span class="dot"></span><span class="status-label">Ollama</span><span class="status-val">…</span></div>
-        <div class="version">v0.9 · Fase 3 · 100% local</div>
+        <div class="version">v0.10 · Fase 3 · 100% local</div>
       </div>
     </aside>
 
@@ -325,6 +325,18 @@
       <!-- ===== PENTEST ===== -->
       <section class="view" id="view-pentest">
         <div id="pentest-status" class="sched-banner"></div>
+
+        <div class="card">
+          <div class="card-head"><h3>Herramientas de Kali <span class="muted" id="pt-tools-count"></span></h3>
+            <div>
+              <button id="btn-pt-recheck" class="btn ghost sm">🔄 Comprobar</button>
+              <button id="btn-pt-install" class="btn ghost sm">⬇️ Instalar / actualizar</button>
+            </div>
+          </div>
+          <div id="pt-tools-grid" class="pt-tools-grid"></div>
+          <pre id="pt-install-log" class="pt-output hidden"></pre>
+        </div>
+
         <div class="split">
           <div class="card form-card">
             <h3>Pentest autorizado (Kali)</h3>
@@ -377,6 +389,7 @@
             </div>
             <div id="pt-result" class="hidden">
               <div class="result-badges" id="pt-meta"></div>
+              <div class="result-actions"><button class="btn ghost sm hidden" id="btn-pt-report">⬇ Informe corporativo (HTML)</button></div>
               <div id="pt-findings"></div>
               <details class="acc" open><summary>🛠️ Salida de herramientas</summary>
                 <div id="pt-tools" class="pt-tools"></div></details>
@@ -500,6 +513,17 @@
             <input id="set-test-email" class="input" placeholder="email para la prueba" />
             <button id="btn-test-email" class="btn ghost">Probar email</button>
           </div>
+        </div>
+
+        <div class="card form-card">
+          <h3>Marca e informes corporativos</h3>
+          <p class="muted">Aparecen en la portada de los informes de pentest (email y descarga).</p>
+          <div class="form-grid">
+            <div><label class="lbl">Nombre de la empresa</label><input id="set-company" class="input" placeholder="ACME Security S.L." /></div>
+            <div><label class="lbl">Pie de informe</label><input id="set-report-footer" class="input" placeholder="Documento confidencial" /></div>
+          </div>
+          <label class="lbl">Logo (URL http(s) o data URI)</label>
+          <input id="set-logo" class="input mono" placeholder="https://miempresa.com/logo.png" />
         </div>
 
         <div class="card">

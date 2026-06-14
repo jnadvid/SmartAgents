@@ -31,6 +31,9 @@ EDITABLE: dict[str, type] = {
     "smtp_from": str,
     "smtp_use_tls": bool,
     "notify_email": str,
+    "company_name": str,
+    "report_logo_url": str,
+    "report_footer": str,
 }
 # Claves secretas: se persisten y usan, pero NUNCA se devuelven por la API ni se loguean.
 SECRET_KEYS = frozenset({"pentest_wsl_password", "smtp_password"})
@@ -60,6 +63,9 @@ def _env_defaults() -> dict[str, Any]:
         "smtp_from": s.smtp_from,
         "smtp_use_tls": s.smtp_use_tls,
         "notify_email": s.notify_email,
+        "company_name": s.company_name,
+        "report_logo_url": s.report_logo_url,
+        "report_footer": s.report_footer,
     }
 
 

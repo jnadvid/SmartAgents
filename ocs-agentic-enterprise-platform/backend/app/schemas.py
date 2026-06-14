@@ -472,6 +472,9 @@ class SettingsOut(BaseModel):
     smtp_use_tls: bool
     smtp_password_set: bool = False
     notify_email: str
+    company_name: str = ""
+    report_logo_url: str = ""
+    report_footer: str = ""
     host_os: str
     wsl_available: bool
     email_configured: bool = False
@@ -493,6 +496,9 @@ class SettingsUpdate(BaseModel):
     smtp_from: str | None = None
     smtp_use_tls: bool | None = None
     notify_email: str | None = None
+    company_name: str | None = None
+    report_logo_url: str | None = None
+    report_footer: str | None = None
 
 
 class EmailTestRequest(BaseModel):
@@ -563,6 +569,15 @@ class FindingOut(BaseModel):
     title: str
     cve: str = ""
     score: float = 0.0
+
+
+class InstallStatusResponse(BaseModel):
+    running: bool
+    returncode: int | None = None
+    started_at: float | None = None
+    finished_at: float | None = None
+    mode: str = ""
+    log: str = ""
 
 
 class PentestRunResponse(BaseModel):
