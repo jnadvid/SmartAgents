@@ -14,6 +14,8 @@ from app.schemas import (
     ExecutionResponse,
     RouteRequest,
     RouteResponse,
+    SquadExecuteRequest,
+    SquadInfo,
 )
 from app.security.auth import api_key_auth
 from app.security.policies import PolicyViolation
@@ -33,6 +35,28 @@ def list_agents() -> list[AgentInfo]:
 @router.get("/categories", response_model=AgentCategoriesResponse)
 def agent_categories() -> AgentCategoriesResponse:
     return AgentCategoriesResponse(categories=get_agent_registry().categories())
+
+
+@router.get("/squads", response_model=list[SquadInfo])
+def list_squads(db: Session = Depends(get_db)) -> list[SquadInfo]:
+    """Catálogo de equipos (squads) predefinidos de agentes."""
+    return AgentRunner(db).list_squads()
+
+
+@router.post("/squads/execute", response_model=ExecutionResponse)
+def execute_squad(
+    request: SquadExecuteRequest,
+    db: Session = Depends(get_db),
+    username: str = Depends(api_key_auth),
+) -> ExecutionResponse:
+    """Ejecuta un equipo (predefinido vía squad_name o ad-hoc vía agent_names)."""
+    runner = AgentRunner(db)
+    try:
+        return runner.execute_squad(request, username=username)
+    except PolicyViolation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/route", response_model=RouteResponse)

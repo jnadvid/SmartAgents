@@ -102,6 +102,28 @@ class ExecuteRequest(BaseModel):
     )
 
 
+class SquadInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    members: list[str]
+    mode: str = "pipeline"
+
+
+class SquadExecuteRequest(BaseModel):
+    task: str = Field(min_length=1, description="Tarea o instrucción para el equipo")
+    squad_name: str | None = Field(
+        default=None, description="Squad predefinido a usar (si null, se usa agent_names)"
+    )
+    agent_names: list[str] | None = Field(
+        default=None, description="Equipo ad-hoc: lista ordenada de agentes (2-8)"
+    )
+    model: str | None = Field(default=None, description="Modelo Ollama a usar")
+    use_documents: bool = Field(default=False, description="Usar documentos subidos (RAG)")
+    extra_context: str | None = Field(default=None, description="Contexto adicional opcional")
+
+
 class ToolResultSummary(BaseModel):
     tool_name: str
     status: str

@@ -11,6 +11,7 @@ from functools import lru_cache
 from sqlalchemy.orm import Session
 
 from app.agents.registry import AgentRegistry, build_default_registry as build_agents
+from app.agents.squads import SquadRegistry, build_default_squad_registry
 from app.config import get_settings
 from app.llm.base import BaseLLMProvider
 from app.llm.ollama_provider import OllamaProvider
@@ -22,6 +23,8 @@ from app.schemas import (
     ExecuteRequest,
     ExecutionResponse,
     RouteResponse,
+    SquadExecuteRequest,
+    SquadInfo,
     ToolResultSummary,
     VerificationCheckOut,
     VerificationOut,
@@ -47,11 +50,17 @@ def get_agent_registry() -> AgentRegistry:
     return build_agents()
 
 
+@lru_cache
+def get_squad_registry() -> SquadRegistry:
+    return build_default_squad_registry()
+
+
 def reset_runtime_singletons() -> None:
     """Limpia los singletons (útil en tests)."""
     get_llm_provider.cache_clear()
     get_tool_registry.cache_clear()
     get_agent_registry.cache_clear()
+    get_squad_registry.cache_clear()
 
 
 class AgentRunner:
@@ -110,6 +119,47 @@ class AgentRunner:
             username=username,
         )
         return self._to_response(result)
+
+    # ------------------------------------------------------------------
+    # Multi-agente (squads)
+    # ------------------------------------------------------------------
+
+    def list_squads(self) -> list[SquadInfo]:
+        """Catálogo de equipos predefinidos."""
+        return [SquadInfo(**squad.describe()) for squad in get_squad_registry().list_squads()]
+
+    def execute_squad(self, request: SquadExecuteRequest, username: str = "local") -> ExecutionResponse:
+        """Ejecuta un equipo (predefinido o ad-hoc) sobre una tarea."""
+        squad_label, squad_display, members = self._resolve_squad(request)
+        result = self.engine.run_squad(
+            task=request.task,
+            members=members,
+            squad_label=squad_label,
+            squad_display=squad_display,
+            model=request.model,
+            use_documents=request.use_documents,
+            extra_context=request.extra_context,
+            username=username,
+        )
+        return self._to_response(result)
+
+    @staticmethod
+    def _resolve_squad(request: SquadExecuteRequest) -> tuple[str, str, list[str]]:
+        """Resuelve el equipo a ejecutar: predefinido (squad_name) o ad-hoc (agent_names)."""
+        if request.squad_name:
+            squad = get_squad_registry().get(request.squad_name)
+            if squad is None:
+                available = ", ".join(get_squad_registry().names())
+                raise ValueError(
+                    f"Equipo desconocido: '{request.squad_name}'. Disponibles: {available}."
+                )
+            return f"squad:{squad.name}", squad.display_name, list(squad.members)
+        if request.agent_names:
+            members = [name for name in request.agent_names if name]
+            if len(members) < 2:
+                raise ValueError("Un equipo ad-hoc requiere al menos 2 agentes.")
+            return "squad:custom", "Equipo personalizado", members
+        raise ValueError("Indica 'squad_name' o 'agent_names' para ejecutar un equipo.")
 
     # ------------------------------------------------------------------
 
