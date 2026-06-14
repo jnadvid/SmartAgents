@@ -14,6 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.registry import AgentRegistry
+from app.connectors.base import ConnectorContext
+from app.connectors.registry import ConnectorRegistry
 from app.llm.base import BaseLLMProvider
 from app.models import ScheduledRun, ScheduledTask
 from app.scheduler.schedule import (
@@ -91,6 +93,64 @@ def _validate_target(
         raise ValueError(f"Tipo de objetivo no soportado: '{target_kind}'.")
 
 
+def _involved_agent_names(target_kind: str, target_ref: str | None, agent_names_json: str) -> list[str]:
+    """Agentes que recibirán los datos del conector (para validar el acceso)."""
+    if target_kind == "agent":
+        return [target_ref] if target_ref else []
+    if target_kind == "team":
+        return [n for n in json.loads(agent_names_json or "[]") if n]
+    if target_kind == "squad":
+        from app.services.agent_runner import get_squad_registry
+
+        squad = get_squad_registry().get(target_ref or "")
+        return list(squad.members) if squad else []
+    return []  # auto
+
+
+def _common_data_access(agent_names: list[str], agent_registry: AgentRegistry) -> set[str]:
+    """Intersección del data_access de los agentes implicados."""
+    sets: list[set[str]] = []
+    for name in agent_names:
+        agent = agent_registry.get(name)
+        sets.append(set(agent.data_access) if agent else set())
+    if not sets:
+        return set()
+    common = set(sets[0])
+    for extra in sets[1:]:
+        common &= extra
+    return common
+
+
+def _validate_connector(
+    target_kind: str,
+    target_ref: str | None,
+    agent_names_json: str,
+    connector: str | None,
+    agent_registry: AgentRegistry,
+) -> None:
+    """Valida el conector y que TODOS los agentes implicados tengan acceso de lectura."""
+    if not connector:
+        return
+    from app.services.agent_runner import get_connector_registry
+
+    if get_connector_registry().get(connector) is None:
+        raise ValueError(f"Conector desconocido: '{connector}'.")
+    if target_kind == "auto":
+        raise ValueError("Para usar un conector elige un agente, squad o equipo concreto (no 'auto').")
+    involved = _involved_agent_names(target_kind, target_ref, agent_names_json)
+    if not involved:
+        raise ValueError("No se pudieron resolver los agentes del objetivo para validar el acceso al conector.")
+    lacking = [
+        name for name in involved
+        if connector not in (agent_registry.get(name).data_access if agent_registry.get(name) else [])
+    ]
+    if lacking:
+        raise ValueError(
+            f"Estos agentes no tienen acceso de lectura al conector '{connector}': {', '.join(lacking)}. "
+            "Revisa su data_access."
+        )
+
+
 # ---------------------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------------------
@@ -114,6 +174,10 @@ def create_task(
     )
     validate_spec(spec)  # ScheduleError -> ValueError (subclase)
     _validate_target(payload.target_kind, payload.target_ref, payload.agent_names, agent_registry, squad_names)
+    _validate_connector(
+        payload.target_kind, payload.target_ref,
+        json.dumps(payload.agent_names or [], ensure_ascii=False), payload.connector, agent_registry,
+    )
 
     now = utcnow()
     next_run = first_run_at(spec, now)
@@ -126,6 +190,8 @@ def create_task(
         target_kind=payload.target_kind,
         target_ref=(payload.target_ref or ""),
         agent_names=json.dumps(payload.agent_names or [], ensure_ascii=False),
+        connector=payload.connector,
+        connector_params=json.dumps(payload.connector_params or {}, ensure_ascii=False),
         schedule_kind=payload.schedule_kind,
         run_at=spec.run_at,
         interval_minutes=payload.interval_minutes,
@@ -175,17 +241,20 @@ def update_task(
 
     for field in ("name", "task", "extra_context", "model", "use_documents", "target_ref",
                   "schedule_kind", "run_at", "interval_minutes", "time_of_day",
-                  "day_of_week", "cron", "timezone", "target_kind"):
+                  "day_of_week", "cron", "timezone", "target_kind", "connector"):
         if field in data and data[field] is not None:
             setattr(task, field, data[field])
     if "agent_names" in data and data["agent_names"] is not None:
         task.agent_names = json.dumps(data["agent_names"], ensure_ascii=False)
+    if "connector_params" in data and data["connector_params"] is not None:
+        task.connector_params = json.dumps(data["connector_params"], ensure_ascii=False)
 
-    # Validar objetivo y programación tras los cambios.
+    # Validar objetivo, conector y programación tras los cambios.
     _validate_target(
         task.target_kind, task.target_ref, json.loads(task.agent_names or "[]"),
         agent_registry, squad_names,
     )
+    _validate_connector(task.target_kind, task.target_ref, task.agent_names, task.connector, agent_registry)
     spec = spec_from_task(task)
     validate_spec(spec)
 
@@ -224,82 +293,62 @@ def set_enabled(db: Session, task: ScheduledTask, enabled: bool) -> ScheduledTas
 # ---------------------------------------------------------------------------
 
 
-def _dispatch(db: Session, task: ScheduledTask, runner: AgentRunner):
+def _dispatch(task: ScheduledTask, runner: AgentRunner, extra_context: str | None):
     """Ejecuta la tarea según su objetivo y devuelve la ExecutionResponse."""
-    if task.target_kind == "agent":
-        return runner.execute(
-            ExecuteRequest(
-                task=task.task, agent_name=task.target_ref or None, model=task.model,
-                use_documents=task.use_documents, extra_context=task.extra_context,
-            )
-        )
     if task.target_kind == "squad":
         return runner.execute_squad(
             SquadExecuteRequest(
                 task=task.task, squad_name=task.target_ref or None, model=task.model,
-                use_documents=task.use_documents, extra_context=task.extra_context,
+                use_documents=task.use_documents, extra_context=extra_context,
             )
         )
     if task.target_kind == "team":
         return runner.execute_squad(
             SquadExecuteRequest(
                 task=task.task, agent_names=json.loads(task.agent_names or "[]"), model=task.model,
-                use_documents=task.use_documents, extra_context=task.extra_context,
+                use_documents=task.use_documents, extra_context=extra_context,
             )
         )
-    # auto
+    # agent o auto
     return runner.execute(
         ExecuteRequest(
-            task=task.task, agent_name=None, model=task.model,
-            use_documents=task.use_documents, extra_context=task.extra_context,
+            task=task.task, agent_name=(task.target_ref or None) if task.target_kind == "agent" else None,
+            model=task.model, use_documents=task.use_documents, extra_context=extra_context,
         )
     )
 
 
-def execute_one(
-    db: Session,
-    task: ScheduledTask,
-    *,
-    llm: BaseLLMProvider,
-    tool_registry: ToolRegistry,
-    agent_registry: AgentRegistry,
-    session_factory,
-) -> ScheduledRun:
-    """Ejecuta una tarea programada una vez, registra el run y reprograma."""
-    started = utcnow()
-    runner = AgentRunner(
-        db, llm=llm, tool_registry=tool_registry,
-        agent_registry=agent_registry, session_factory=session_factory,
+def _read_connector(
+    task: ScheduledTask, *, agent_registry: AgentRegistry, connector_registry: ConnectorRegistry
+):
+    """Lee el conector de la tarea respetando el data_access. Devuelve ConnectorResult o None."""
+    if not task.connector:
+        return None
+    involved = _involved_agent_names(task.target_kind, task.target_ref, task.agent_names)
+    allowed = list(_common_data_access(involved, agent_registry))
+    params = json.loads(task.connector_params or "{}")
+    return connector_registry.read(
+        task.connector, params,
+        ConnectorContext(agent_name=task.target_ref or "scheduler"),
+        allowed_connectors=allowed,
     )
-    execution_id: int | None = None
-    status = "completed"
-    message = ""
-    try:
-        response = _dispatch(db, task, runner)
-        execution_id = response.execution_id
-        status = response.status
-        message = response.error_message or ""
-    except (ValueError, PolicyViolation) as exc:
-        status = "error"
-        message = summarize_for_log(str(exc), 400)
-        logger.warning("Tarea programada %s con objetivo inválido: %s", task.id, message)
-    except Exception as exc:  # noqa: BLE001 - frontera: nunca tumbar el scheduler
-        status = "error"
-        message = summarize_for_log(str(exc), 400)
-        logger.exception("Error ejecutando la tarea programada %s", task.id)
 
+
+def _finish_run(
+    db: Session, task: ScheduledTask, started: datetime, *, status: str, message: str, execution_id: int | None
+) -> ScheduledRun:
+    """Registra el run, actualiza la tarea y calcula la siguiente ejecución."""
     finished = utcnow()
     run = ScheduledRun(
         scheduled_task_id=task.id,
         execution_id=execution_id,
         status=status,
-        message=message,
+        message=summarize_for_log(message, 500),
         started_at=started,
         finished_at=finished,
     )
     db.add(run)
 
-    # Reprogramar.
     task.last_run_at = finished
     task.last_status = status
     task.last_execution_id = execution_id
@@ -322,6 +371,70 @@ def execute_one(
     return run
 
 
+def execute_one(
+    db: Session,
+    task: ScheduledTask,
+    *,
+    llm: BaseLLMProvider,
+    tool_registry: ToolRegistry,
+    agent_registry: AgentRegistry,
+    session_factory,
+    connector_registry: ConnectorRegistry | None = None,
+) -> ScheduledRun:
+    """Ejecuta una tarea programada una vez (leyendo su conector si lo tiene)."""
+    started = utcnow()
+    if connector_registry is None:
+        from app.services.agent_runner import get_connector_registry
+
+        connector_registry = get_connector_registry()
+
+    # 1. Leer el conector (si lo hay) respetando el data_access de los agentes.
+    extra_context = task.extra_context
+    connector_note = ""
+    if task.connector:
+        result = _read_connector(task, agent_registry=agent_registry, connector_registry=connector_registry)
+        if result is None or not result.ok:
+            reason = (result.error_message if result else "sin resultado") or (result.status if result else "")
+            return _finish_run(
+                db, task, started, status="error",
+                message=f"conector {task.connector}: {reason}", execution_id=None,
+            )
+        connector_note = f"conector {task.connector}: {result.count} registro(s)"
+        if result.count == 0:
+            return _finish_run(
+                db, task, started, status="skipped",
+                message=f"{connector_note} (sin datos: no se ejecuta)", execution_id=None,
+            )
+        block = result.to_context_block()
+        extra_context = ((task.extra_context or "") + "\n\n" + block).strip()
+
+    # 2. Ejecutar el agente / equipo.
+    runner = AgentRunner(
+        db, llm=llm, tool_registry=tool_registry,
+        agent_registry=agent_registry, session_factory=session_factory,
+    )
+    execution_id: int | None = None
+    status = "completed"
+    message = ""
+    try:
+        response = _dispatch(task, runner, extra_context)
+        execution_id = response.execution_id
+        status = response.status
+        message = response.error_message or ""
+    except (ValueError, PolicyViolation) as exc:
+        status = "error"
+        message = summarize_for_log(str(exc), 400)
+        logger.warning("Tarea programada %s con objetivo inválido: %s", task.id, message)
+    except Exception as exc:  # noqa: BLE001 - frontera: nunca tumbar el scheduler
+        status = "error"
+        message = summarize_for_log(str(exc), 400)
+        logger.exception("Error ejecutando la tarea programada %s", task.id)
+
+    if connector_note:
+        message = (connector_note + (" · " + message if message else "")).strip()
+    return _finish_run(db, task, started, status=status, message=message, execution_id=execution_id)
+
+
 def due_tasks(db: Session, now: datetime | None = None) -> list[ScheduledTask]:
     now = now or utcnow()
     stmt = (
@@ -342,6 +455,7 @@ def run_due(
     tool_registry: ToolRegistry,
     agent_registry: AgentRegistry,
     session_factory,
+    connector_registry: ConnectorRegistry | None = None,
     now: datetime | None = None,
 ) -> list[ScheduledRun]:
     """Ejecuta todas las tareas vencidas. Aísla los fallos por tarea."""
@@ -352,6 +466,7 @@ def run_due(
                 execute_one(
                     db, task, llm=llm, tool_registry=tool_registry,
                     agent_registry=agent_registry, session_factory=session_factory,
+                    connector_registry=connector_registry,
                 )
             )
         except Exception:  # noqa: BLE001 - nunca interrumpir el resto del lote
@@ -380,6 +495,8 @@ def task_to_out(task: ScheduledTask) -> ScheduledTaskOut:
         target_kind=task.target_kind,
         target_ref=task.target_ref,
         agent_names=json.loads(task.agent_names or "[]"),
+        connector=task.connector,
+        connector_params=json.loads(task.connector_params or "{}"),
         schedule_kind=task.schedule_kind,
         schedule_human=human,
         run_at=task.run_at,

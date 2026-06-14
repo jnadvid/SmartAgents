@@ -45,18 +45,21 @@ class AgentRegistry:
 
 
 def build_default_registry() -> AgentRegistry:
-    """Construye el registro con los 36 agentes especializados por áreas."""
+    """Construye el registro con los 44 agentes especializados por áreas."""
     from app.agents.agile_coach_agent import AgileCoachAgent
     from app.agents.appsec_engineer_agent import AppSecEngineerAgent
     from app.agents.backend_developer_agent import BackendDeveloperAgent
+    from app.agents.blue_team_analyst_agent import BlueTeamAnalystAgent
     from app.agents.business_assistant_agent import BusinessAssistantAgent
     from app.agents.code_reviewer_agent import CodeReviewerAgent
     from app.agents.compliance_agent import ComplianceAgent
     from app.agents.customer_support_agent import CustomerSupportAgent
     from app.agents.cyber_threat_analyst_agent import CyberThreatAnalystAgent
+    from app.agents.cyberpsychology_analyst_agent import CyberpsychologyAnalystAgent
     from app.agents.data_analyst_agent import DataAnalystAgent
     from app.agents.data_protection_officer_agent import DataProtectionOfficerAgent
     from app.agents.database_engineer_agent import DatabaseEngineerAgent
+    from app.agents.detection_engineer_agent import DetectionEngineerAgent
     from app.agents.devops_engineer_agent import DevOpsEngineerAgent
     from app.agents.document_audit_agent import DocumentAuditAgent
     from app.agents.document_writer_agent import DocumentWriterAgent
@@ -68,16 +71,21 @@ def build_default_registry() -> AgentRegistry:
     from app.agents.market_research_agent import MarketResearchAgent
     from app.agents.operations_manager_agent import OperationsManagerAgent
     from app.agents.organizational_psychologist_agent import OrganizationalPsychologistAgent
+    from app.agents.ot_security_analyst_agent import OtSecurityAnalystAgent
     from app.agents.people_ops_agent import PeopleOpsAgent
     from app.agents.project_manager_agent import ProjectManagerAgent
     from app.agents.prompt_injection_tester_agent import PromptInjectionTesterAgent
+    from app.agents.purple_team_lead_agent import PurpleTeamLeadAgent
     from app.agents.qa_test_engineer_agent import QATestEngineerAgent
     from app.agents.recruiter_agent import RecruiterAgent
+    from app.agents.red_team_operator_agent import RedTeamOperatorAgent
     from app.agents.report_agent import ReportAgent
     from app.agents.sales_proposal_agent import SalesProposalAgent
+    from app.agents.soc_manager_agent import SocManagerAgent
     from app.agents.software_architect_agent import SoftwareArchitectAgent
     from app.agents.strategy_consultant_agent import StrategyConsultantAgent
     from app.agents.technical_writer_agent import TechnicalWriterAgent
+    from app.agents.threat_hunter_agent import ThreatHunterAgent
     from app.agents.threat_intel_analyst_agent import ThreatIntelAnalystAgent
     from app.agents.ux_psychologist_agent import UXPsychologistAgent
     from app.agents.vulnerability_triage_agent import VulnerabilityTriageAgent
@@ -125,6 +133,14 @@ def build_default_registry() -> AgentRegistry:
             ThreatIntelAnalystAgent(),
             AppSecEngineerAgent(),
             PromptInjectionTesterAgent(),
+            # Blue / Red / Purple Team, SOC y OT
+            SocManagerAgent(),
+            BlueTeamAnalystAgent(),
+            ThreatHunterAgent(),
+            DetectionEngineerAgent(),
+            RedTeamOperatorAgent(),
+            PurpleTeamLeadAgent(),
+            OtSecurityAnalystAgent(),
             # --- Compliance ---
             ComplianceAgent(),
             DataProtectionOfficerAgent(),
@@ -132,6 +148,7 @@ def build_default_registry() -> AgentRegistry:
             OrganizationalPsychologistAgent(),
             UXPsychologistAgent(),
             WellbeingCoachAgent(),
+            CyberpsychologyAnalystAgent(),
         ]
     )
     return registry

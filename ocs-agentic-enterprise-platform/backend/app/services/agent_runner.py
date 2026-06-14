@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.registry import AgentRegistry, build_default_registry as build_agents
 from app.agents.squads import SquadRegistry, build_default_squad_registry
+from app.connectors.registry import ConnectorRegistry, build_default_connector_registry
 from app.config import get_settings
 from app.llm.base import BaseLLMProvider
 from app.llm.ollama_provider import OllamaProvider
@@ -55,12 +56,18 @@ def get_squad_registry() -> SquadRegistry:
     return build_default_squad_registry()
 
 
+@lru_cache
+def get_connector_registry() -> ConnectorRegistry:
+    return build_default_connector_registry()
+
+
 def reset_runtime_singletons() -> None:
     """Limpia los singletons (útil en tests)."""
     get_llm_provider.cache_clear()
     get_tool_registry.cache_clear()
     get_agent_registry.cache_clear()
     get_squad_registry.cache_clear()
+    get_connector_registry.cache_clear()
 
 
 class AgentRunner:

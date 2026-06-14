@@ -60,6 +60,15 @@ INTENT_CATEGORIES: tuple[str, ...] = (
     "data_protection",
     # Proyectos (especializado)
     "agile_coaching",
+    # Ciberseguridad: blue / red / purple team, SOC, OT y factor humano
+    "soc_management",
+    "blue_team",
+    "threat_hunting",
+    "detection_engineering",
+    "red_team",
+    "purple_team",
+    "ot_security",
+    "cyberpsychology",
 )
 
 # Palabras clave normalizadas (minúsculas, sin acentos).
@@ -341,6 +350,64 @@ INTENT_KEYWORDS: dict[str, dict[str, list[str]]] = {
             "ceremonias agiles", "refinamiento del backlog", "tablero kanban",
         ],
         "weak": ["agil", "backlog"],
+    },
+    # ------------- Ciberseguridad: blue/red/purple, SOC, OT, humano -------------
+    "soc_management": {
+        "strong": [
+            "jefe de soc", "responsable del soc", "triaje de alertas", "derivar la alerta",
+            "gestion del soc", "priorizar alertas", "soc manager", "decision del soc",
+        ],
+        "weak": [],
+    },
+    "blue_team": {
+        "strong": [
+            "blue team", "equipo azul", "investiga la alerta", "investigar la alerta",
+            "monitorizacion de seguridad", "analista de soc", "defensa del soc",
+        ],
+        "weak": [],
+    },
+    "threat_hunting": {
+        "strong": [
+            "caza de amenazas", "threat hunter", "hipotesis de caza",
+            "busqueda proactiva de amenazas", "hunting de amenazas",
+        ],
+        "weak": [],
+    },
+    "detection_engineering": {
+        "strong": [
+            "ingenieria de deteccion", "detection engineering", "regla sigma", "reglas sigma",
+            "caso de uso de deteccion", "crea una regla de deteccion", "regla de correlacion",
+        ],
+        "weak": ["sigma"],
+    },
+    "red_team": {
+        "strong": [
+            "red team", "equipo rojo", "emulacion de adversario", "ejercicio de red team",
+            "operador red team", "adversary emulation",
+        ],
+        "weak": [],
+    },
+    "purple_team": {
+        "strong": [
+            "purple team", "equipo purpura", "cobertura de deteccion", "validacion de detecciones",
+            "ejercicio purple", "matriz de cobertura",
+        ],
+        "weak": [],
+    },
+    "ot_security": {
+        "strong": [
+            "ciberseguridad industrial", "seguridad ot", "sistemas de control industrial",
+            "scada", "modelo de purdue", "iec 62443", "seguridad industrial",
+        ],
+        "weak": ["plc"],
+    },
+    "cyberpsychology": {
+        "strong": [
+            "psicologia de la ciberseguridad", "factor humano", "ingenieria social",
+            "concienciacion en seguridad", "cultura de seguridad", "resiliencia ante phishing",
+            "simulacion de phishing",
+        ],
+        "weak": [],
     },
 }
 

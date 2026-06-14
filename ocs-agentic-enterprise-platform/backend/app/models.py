@@ -185,6 +185,10 @@ class ScheduledTask(Base):
     target_ref: Mapped[str] = mapped_column(String(200), default="")
     agent_names: Mapped[str] = mapped_column(Text, default="[]")  # JSON list (team ad-hoc)
 
+    # Fuente de datos opcional (conector) leída antes de ejecutar
+    connector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    connector_params: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+
     # Programación: once | interval | daily | weekly | cron
     schedule_kind: Mapped[str] = mapped_column(String(20), default="once")
     run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

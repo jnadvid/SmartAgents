@@ -90,6 +90,9 @@ class BaseAgent:
     description: str = ""
     system_prompt: str = "Eres un asistente empresarial riguroso."
     allowed_tools: list[str] = []
+    # Acceso de LECTURA de datos: allow-list de conectores que el agente puede
+    # consultar (definido explícitamente por agente). Vacío = sin acceso externo.
+    data_access: list[str] = []
     default_model: str | None = None
     security_policy: str = "standard"
     max_steps: int = 8
@@ -240,6 +243,7 @@ class BaseAgent:
             "category": self.category,
             "description": self.description,
             "allowed_tools": list(self.allowed_tools),
+            "data_access": list(self.data_access),
             "default_model": self.default_model,
             "output_sections": list(self.output_format),
             "enabled": True,

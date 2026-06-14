@@ -24,6 +24,7 @@ from app.security.policies import PolicyViolation
 from app.services import scheduler_service
 from app.services.agent_runner import (
     get_agent_registry,
+    get_connector_registry,
     get_llm_provider,
     get_squad_registry,
     get_tool_registry,
@@ -134,6 +135,7 @@ def run_scheduled_task_now(task_id: int, db: Session = Depends(get_db)) -> Sched
         tool_registry=get_tool_registry(),
         agent_registry=get_agent_registry(),
         session_factory=SessionLocal,
+        connector_registry=get_connector_registry(),
     )
     return ScheduledRunOut.model_validate(run)
 

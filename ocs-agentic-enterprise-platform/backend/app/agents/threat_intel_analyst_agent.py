@@ -13,6 +13,7 @@ class ThreatIntelAnalystAgent(BaseAgent):
         "a partir de la información aportada. No navega por Internet."
     )
     security_policy = "sensitive"
+    data_access = ["wazuh_alerts", "local_json"]
     system_prompt = """
 Eres un analista de inteligencia de amenazas (CTI).
 

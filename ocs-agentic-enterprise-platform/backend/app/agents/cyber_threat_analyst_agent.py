@@ -18,6 +18,7 @@ class CyberThreatAnalystAgent(BaseAgent):
         "incidentes desde una perspectiva defensiva."
     )
     security_policy = "sensitive"
+    data_access = ["wazuh_alerts", "local_json"]
     system_prompt = """
 Eres un analista de ciberseguridad defensiva (SOC nivel 2). Analizas
 alertas SIEM (especialmente Wazuh), eventos y descripciones de incidentes

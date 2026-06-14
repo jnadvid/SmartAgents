@@ -55,6 +55,15 @@ INTENT_AGENT_MAP: dict[str, str] = {
     "data_protection": "data_protection_officer",
     # Proyectos (especializado)
     "agile_coaching": "agile_coach",
+    # Ciberseguridad: blue / red / purple team, SOC, OT y factor humano
+    "soc_management": "soc_manager",
+    "blue_team": "blue_team_analyst",
+    "threat_hunting": "threat_hunter",
+    "detection_engineering": "detection_engineer",
+    "red_team": "red_team_operator",
+    "purple_team": "purple_team_lead",
+    "ot_security": "ot_security_analyst",
+    "cyberpsychology": "cyberpsychology_analyst",
 }
 
 # Agentes auxiliares PROPUESTOS por intención (su ejecución es opcional y
@@ -82,6 +91,14 @@ AUXILIARY_AGENTS_MAP: dict[str, list[str]] = {
     "operations_management": ["report"],
     "recruitment": ["people_ops"],
     "data_protection": ["compliance"],
+    # SOC / blue / red / purple: el jefe de SOC concluye, purple valida
+    "blue_team": ["soc_manager"],
+    "threat_hunting": ["soc_manager"],
+    "soc_management": ["report"],
+    "red_team": ["purple_team_lead"],
+    "purple_team": ["report"],
+    "ot_security": ["report"],
+    "cyberpsychology": ["report"],
 }
 
 FALLBACK_AGENT = "business_assistant"

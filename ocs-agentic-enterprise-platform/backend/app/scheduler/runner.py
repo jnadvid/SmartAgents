@@ -51,6 +51,7 @@ class SchedulerThread:
             from app.services import scheduler_service
             from app.services.agent_runner import (
                 get_agent_registry,
+                get_connector_registry,
                 get_llm_provider,
                 get_tool_registry,
             )
@@ -62,6 +63,7 @@ class SchedulerThread:
                     tool_registry=get_tool_registry(),
                     agent_registry=get_agent_registry(),
                     session_factory=SessionLocal,
+                    connector_registry=get_connector_registry(),
                 )
             if runs:
                 logger.info("Programador: %d tarea(s) ejecutada(s)", len(runs))

@@ -60,6 +60,16 @@ class Settings(BaseSettings):
     enable_scheduler: bool = True
     scheduler_poll_seconds: int = 30
 
+    # Conectores de datos (lectura automática para los agentes)
+    # Los conectores de archivo (Wazuh local, JSON, CSV) están siempre disponibles
+    # y solo leen dentro de backend/data. Los conectores HTTP están desactivados
+    # por defecto y, si se activan, solo permiten hosts de la allow-list.
+    enable_http_connectors: bool = False
+    http_connector_allowlist: str = ""  # hosts separados por comas (p. ej. "localhost,127.0.0.1")
+    connector_max_records: int = 200
+    connector_timeout: int = 15
+    wazuh_alerts_path: str = ""  # ruta al alerts.json de Wazuh (vacío = data/connectors/wazuh/alerts.json)
+
     # RAG
     rag_chunk_size: int = 1200
     rag_chunk_overlap: int = 150
@@ -94,6 +104,14 @@ class Settings(BaseSettings):
     @property
     def documents_dir(self) -> Path:
         return self.data_dir / "documents"
+
+    @property
+    def connectors_dir(self) -> Path:
+        return self.data_dir / "connectors"
+
+    @property
+    def http_connector_hosts(self) -> set[str]:
+        return {h.strip().lower() for h in self.http_connector_allowlist.split(",") if h.strip()}
 
     @property
     def frontend_dir(self) -> Path:

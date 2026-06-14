@@ -124,6 +124,41 @@ DEFAULT_SQUADS: tuple[Squad, ...] = (
         members=["incident_responder", "threat_intel_analyst", "compliance", "report"],
     ),
     Squad(
+        name="soc_investigation_team",
+        display_name="Investigación SOC (Blue Team)",
+        category="cybersecurity",
+        description=(
+            "Flujo SOC: el analista Blue Team investiga las alertas, el threat hunter "
+            "busca señales adicionales y el JEFE DE SOC decide la derivación y la "
+            "conclusión final. Ideal para automatizar con el conector de Wazuh."
+        ),
+        members=["blue_team_analyst", "threat_hunter", "soc_manager"],
+    ),
+    Squad(
+        name="purple_team_exercise",
+        display_name="Ejercicio Purple Team",
+        category="cybersecurity",
+        description=(
+            "El Red Team emula un adversario (plan), el Blue Team evalúa la detección y "
+            "el líder Purple construye la matriz de cobertura y los gaps."
+        ),
+        members=["red_team_operator", "blue_team_analyst", "purple_team_lead"],
+    ),
+    Squad(
+        name="ot_security_assessment",
+        display_name="Evaluación de Seguridad OT",
+        category="cybersecurity",
+        description="Evaluación de ciberseguridad industrial: analista OT, triaje de vulnerabilidades e informe.",
+        members=["ot_security_analyst", "vulnerability_triage", "report"],
+    ),
+    Squad(
+        name="security_awareness_team",
+        display_name="Concienciación en Seguridad",
+        category="cybersecurity",
+        description="Factor humano: psicología de la ciberseguridad, formación y plan de concienciación.",
+        members=["cyberpsychology_analyst", "hr_training", "report"],
+    ),
+    Squad(
         name="product_launch_team",
         display_name="Lanzamiento de Producto",
         category="business",

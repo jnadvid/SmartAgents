@@ -65,6 +65,7 @@ class AgentInfo(BaseModel):
     category: str
     description: str
     allowed_tools: list[str]
+    data_access: list[str] = []
     default_model: str | None = None
     output_sections: list[str]
     enabled: bool = True
@@ -327,6 +328,9 @@ class ScheduledTaskCreate(BaseModel):
     target_ref: str | None = Field(default=None, description="Agente o squad según target_kind")
     agent_names: list[str] | None = Field(default=None, description="Equipo ad-hoc (target_kind=team)")
 
+    connector: str | None = Field(default=None, description="Conector de datos a leer antes de ejecutar")
+    connector_params: dict[str, Any] | None = Field(default=None, description="Parámetros del conector")
+
     schedule_kind: ScheduleKind
     run_at: datetime | None = Field(default=None, description="Momento exacto (once), en UTC si no lleva zona")
     interval_minutes: int | None = Field(default=None, ge=1, le=525600)
@@ -347,6 +351,9 @@ class ScheduledTaskUpdate(BaseModel):
     target_kind: TargetKind | None = None
     target_ref: str | None = None
     agent_names: list[str] | None = None
+
+    connector: str | None = None
+    connector_params: dict[str, Any] | None = None
 
     schedule_kind: ScheduleKind | None = None
     run_at: datetime | None = None
@@ -378,6 +385,8 @@ class ScheduledTaskOut(BaseModel):
     target_kind: str
     target_ref: str
     agent_names: list[str]
+    connector: str | None = None
+    connector_params: dict[str, Any] = {}
     schedule_kind: str
     schedule_human: str
     run_at: datetime | None = None
@@ -407,6 +416,40 @@ class SchedulerStatusResponse(BaseModel):
     total_tasks: int
     active_tasks: int
     next_run_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# Conectores de datos
+# ---------------------------------------------------------------------------
+
+
+class ConnectorInfo(BaseModel):
+    name: str
+    display_name: str
+    category: str
+    description: str
+    requires_network: bool
+    enabled: bool
+    input_schema: dict[str, Any]
+
+
+class ConnectorCategoriesResponse(BaseModel):
+    categories: dict[str, list[str]]
+
+
+class ConnectorReadRequest(BaseModel):
+    params: dict[str, Any] = Field(default_factory=dict)
+    max_records: int = Field(default=20, ge=1, le=200, description="Máximo de registros a devolver en la vista previa")
+
+
+class ConnectorReadResponse(BaseModel):
+    connector: str
+    status: str
+    count: int
+    summary: str = ""
+    source: str = ""
+    records: list[dict[str, Any]] = []
+    error_message: str | None = None
 
 
 # ---------------------------------------------------------------------------

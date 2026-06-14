@@ -13,6 +13,7 @@ class IncidentResponderAgent(BaseAgent):
         "recuperación y lecciones aprendidas, sobre sistemas propios y autorizados."
     )
     security_policy = "sensitive"
+    data_access = ["wazuh_alerts", "local_json"]
     system_prompt = """
 Eres un responder de incidentes (DFIR) defensivo, siguiendo el ciclo
 NIST/SANS: preparación, detección, contención, erradicación, recuperación
