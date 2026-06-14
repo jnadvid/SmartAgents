@@ -5,20 +5,22 @@
 set -euo pipefail
 
 PACKAGES=(
-  nmap          # puertos y servicios (+ NSE vuln)
-  whatweb       # fingerprinting web
-  wafw00f       # detección de WAF
-  sslscan       # análisis TLS/SSL
-  dnsrecon      # enumeración DNS
-  nikto         # escáner web
-  gobuster      # fuzzing de directorios
-  feroxbuster   # descubrimiento de contenido recursivo
-  sqlmap        # inyección SQL
-  wpscan        # escáner de WordPress
-  subfinder     # subdominios (pasivo)
-  theharvester  # OSINT pasivo
-  httpx-toolkit # sondeo web (projectdiscovery; binario 'httpx')
-  seclists      # diccionarios (wordlists)
+  # OSINT / DNS
+  whois dnsutils dnsrecon subfinder amass theharvester
+  # Puertos y servicios
+  nmap
+  # Recon web / TLS / CMS
+  whatweb httpx-toolkit wafw00f sslscan testssl.sh cmseek
+  # Enumeración por servicio
+  enum4linux smbmap ssh-audit
+  # Escaneo web / vulnerabilidades
+  nikto nuclei gobuster feroxbuster ffuf
+  # CMS específicos
+  wpscan joomscan droopescan
+  # Explotación / exploits
+  sqlmap dalfox exploitdb
+  # Diccionarios
+  seclists
 )
 
 echo "[*] Actualizando índices de paquetes…"
@@ -34,7 +36,9 @@ apt-get install -y nuclei || echo "[!] nuclei no se pudo instalar por apt; inst�
 
 echo
 echo "[*] Verificación de binarios:"
-for bin in nmap whatweb wafw00f sslscan dnsrecon nikto gobuster feroxbuster sqlmap wpscan subfinder theHarvester httpx nuclei; do
+for bin in whois dig dnsrecon subfinder amass theHarvester nmap whatweb httpx wafw00f \
+           sslscan testssl.sh cmseek enum4linux smbmap ssh-audit nikto nuclei gobuster \
+           feroxbuster ffuf wpscan joomscan droopescan sqlmap dalfox searchsploit; do
   if command -v "$bin" >/dev/null 2>&1; then
     echo "    [ok] $bin"
   else
