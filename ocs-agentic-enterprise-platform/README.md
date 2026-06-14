@@ -22,6 +22,11 @@ solo **Python 3.11+, FastAPI, SQLite y Ollama**.
 - ⏰ **Programador de tareas**: lanza tareas a un agente, un equipo o en modo auto de forma
   **puntual o periódica** (una vez, cada X minutos, diaria, semanal o **cron**), con zona
   horaria. Hilo local en proceso, sin Celery ni cron del sistema.
+- 🛡️ **Equipos de seguridad** (blue/red/purple team, SOC, ciberseguridad industrial OT) y
+  **psicología de la ciberseguridad**, con **conectores de datos** (Wazuh, JSON/CSV) y
+  **acceso de lectura definido por agente** para automatizar, p. ej., el **bucle del SOC**
+  (leer Wazuh → investigar → el jefe de SOC decide derivación y conclusión). Ver
+  [`docs/use_cases.md`](docs/use_cases.md).
 
 ## Novedades de la Fase 2
 
@@ -74,6 +79,12 @@ Una plataforma donde introduces una tarea en lenguaje natural y el sistema:
 
 ### Casos de uso de ciberseguridad
 
+- **Bucle del SOC automatizado**: leer alertas de Wazuh cada X → Blue Team investiga →
+  threat hunter caza → el **jefe de SOC** decide derivación y conclusión (squad + scheduler).
+- Blue / Red / Purple Team: investigación, emulación de adversario autorizada (sin payloads),
+  matriz de cobertura y gaps de detección; ingeniería de detección (Sigma).
+- **Ciberseguridad industrial (OT/ICS)**: Purdue, IEC 62443, recomendaciones safety-first.
+- **Psicología de la ciberseguridad**: factor humano, ingeniería social y concienciación.
 - Análisis de alertas Wazuh/SIEM con normalización y mapeo MITRE ATT&CK heurístico.
 - Triaje de vulnerabilidades (CVSS + criticidad + exposición → prioridad P1-P4 y SLA).
 - Gap analysis simplificado contra ISO 27001 / RGPD.
@@ -104,14 +115,18 @@ AgentRunner ──► ExecutionEngine
                 └──► ChainOfWorkRecorder ──► SQLite (auditoría completa)
 ```
 
-- **36 agentes** especializados en 16 áreas (programación, ciberseguridad, negocio, RRHH,
-  psicología, compliance, proyectos, datos, documentos, ventas, finanzas, legal, etc.).
-- **8 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
-- **Programador de tareas** local (puntual/periódico) con hilo en segundo plano.
+- **44 agentes** especializados en 16 áreas (programación, ciberseguridad —incl. blue/red/
+  purple team, SOC y OT—, negocio, RRHH, psicología, compliance, proyectos, datos, etc.).
+- **12 equipos (squads)** predefinidos + equipos ad-hoc para ejecución multi-agente en cadena.
+- **Conectores de datos** (Wazuh, JSON/CSV local, HTTP opt-in) con **acceso de lectura
+  definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
+- **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
+  ejecutar** (p. ej. el bucle del SOC).
 - **24 herramientas** deterministas: sin Internet, sin comandos del sistema, con validación
   Pydantic, timeout y log de auditoría. Solo acceden a datos vía la BD local (`backend/data`).
-- Detalle completo en [`docs/architecture.md`](docs/architecture.md),
-  [`docs/squads.md`](docs/squads.md) y [`docs/scheduler.md`](docs/scheduler.md).
+- Detalle en [`docs/architecture.md`](docs/architecture.md), [`docs/squads.md`](docs/squads.md),
+  [`docs/scheduler.md`](docs/scheduler.md), [`docs/connectors.md`](docs/connectors.md) y
+  [`docs/use_cases.md`](docs/use_cases.md).
 
 ## Requisitos
 
@@ -274,6 +289,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 | GET/PATCH/DELETE | `/scheduler/tasks/{id}` | Ver / editar / borrar una tarea programada |
 | POST | `/scheduler/tasks/{id}/{pause\|resume\|run-now}` | Pausar, reanudar o ejecutar ya |
 | GET | `/scheduler/status` | Estado del programador |
+| GET | `/connectors`, `/connectors/categories` | Catálogo de conectores de datos |
+| POST | `/connectors/{name}/read` | Vista previa de lectura de una fuente |
 | GET | `/executions`, `/executions/{id}`, `/executions/{id}/chain-of-work` | Histórico y auditoría |
 | GET | `/executions/{id}/export?format=markdown\|html` | Exportar informe de ejecución |
 | POST | `/documents/upload` · GET `/documents` · POST `/documents/search` | RAG local (keyword/semantic/hybrid) |
@@ -304,8 +321,8 @@ trocea en chunks y se indexa en SQLite. Después puedes buscar por palabras clav
 
 ```bash
 cd backend
-pytest          # 107 tests: provider mockeado, clasificador, router, tools, motor,
-                # Chain-of-Work, RAG semántico, métricas, exportación, squads y scheduler
+pytest          # 127 tests: provider mockeado, clasificador, router, tools, motor,
+                # Chain-of-Work, RAG, métricas, exportación, squads, scheduler y conectores
 ```
 
 ## Seguridad
@@ -342,18 +359,21 @@ ocs-agentic-enterprise-platform/
   backend/
     app/
       main.py · config.py · database.py · models.py · schemas.py
-      agents/         # BaseAgent + 36 agentes + squads + registro
+      agents/         # BaseAgent + 44 agentes + squads + registro
       orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
+      connectors/     # conectores de datos (Wazuh, JSON/CSV, HTTP opt-in) + registro
       llm/            # contrato LLM + OllamaProvider + ModelRouter
       tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
       scheduler/      # cálculo de fechas (cron/diaria/…) + hilo del programador
       audit/          # Chain-of-Work
       rag/            # loader, chunker, retriever, embeddings (RAG semántico)
-      api/            # routers FastAPI (incluye scheduler, métricas y exportación)
+      api/            # routers FastAPI (scheduler, conectores, métricas, exportación…)
       security/       # auth, políticas, sanitización
       services/       # fachadas: agent_runner, scheduler, documentos, ejecuciones, métricas
-    data/             # SQLite + documentos subidos (no versionado)
-    tests/            # 107 tests
+    scripts/          # seed_use_cases.py (casos de uso de ejemplo)
+    data/             # SQLite + documentos + datos de conectores (no versionado)
+    tests/            # 127 tests
+  examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)
   docs/               # documentación técnica
   OCS-Platform.bat    # gestor todo-en-uno para Windows

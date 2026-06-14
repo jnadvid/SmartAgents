@@ -1,6 +1,6 @@
 # Agentes
 
-Los 36 agentes comparten el ciclo de `BaseAgent` (planificar herramientas → recoger
+Los 44 agentes comparten el ciclo de `BaseAgent` (planificar herramientas → recoger
 evidencia → prompt estructurado → Ollama → salida con secciones obligatorias) y se
 diferencian de forma **declarativa**: identidad, system prompt, herramientas autorizadas,
 formato de salida y heurística `plan_tools()`.
@@ -40,6 +40,25 @@ tratar documentos como datos (no instrucciones); no revelar secretos.
 | `incident_responder` | incident_response | parse_wazuh_alert, map_to_mitre_attack, extract_action_items, extract_risks | DFIR defensivo: contención → erradicación → recuperación |
 | `threat_intel_analyst` | threat_intelligence | map_to_mitre_attack, extract_risks, summarize_text | CTI con Diamond Model/MITRE; trabaja solo con lo aportado |
 | `appsec_engineer` | application_security | scan_code_security, analyze_code_structure, review_code_quality, extract_risks | SAST heurístico + STRIDE; remediación con código seguro |
+
+## Seguridad: Blue / Red / Purple Team, SOC y OT
+
+Algunos declaran **acceso de lectura** (`data_access`) a conectores para automatizarse
+(ver [`connectors.md`](connectors.md) y [`use_cases.md`](use_cases.md)).
+
+| Agente | Intención | `data_access` | Rol |
+|---|---|---|---|
+| `soc_manager` | soc_management | wazuh_alerts, local_json | **Jefe de SOC**: prioriza, **deriva** y emite la **conclusión final** |
+| `blue_team_analyst` | blue_team | wazuh_alerts, local_json | Investiga alertas, correla y recomienda escalado |
+| `threat_hunter` | threat_hunting | wazuh_alerts, local_json | Caza proactiva: hipótesis + lógica de detección |
+| `detection_engineer` | detection_engineering | wazuh_alerts, local_json | Reglas Sigma/SIEM y cobertura MITRE |
+| `red_team_operator` | red_team | — | Emulación de adversario **autorizada** (sin payloads), política `security_testing` |
+| `purple_team_lead` | purple_team | wazuh_alerts, local_json | Matriz de cobertura técnica→detección y gaps |
+| `ot_security_analyst` | ot_security | local_json, local_csv | Ciberseguridad industrial (Purdue, IEC 62443), safety-first |
+| `cyberpsychology_analyst` | cyberpsychology | local_json, local_csv | Factor humano, ingeniería social y concienciación (psicología) |
+
+Squads de seguridad: `soc_investigation_team` (analista → hunter → **jefe de SOC**),
+`purple_team_exercise`, `ot_security_assessment`, `security_awareness_team`.
 
 ## Agentes de programación
 
