@@ -336,3 +336,7 @@ textarea.input { resize: vertical; }
 .pt-tool-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .pt-tool-head strong { flex: 1; }
 .pt-output { margin: 6px 0 0; padding: 9px; background: #0a0e14; border: 1px solid var(--border-soft); border-radius: 8px; max-height: 280px; overflow: auto; font-family: "Consolas", ui-monospace, monospace; font-size: 0.74rem; white-space: pre-wrap; word-break: break-word; color: #cdd9e5; }
+.pt-findings-box { border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px; margin: 12px 0; background: var(--bg-2); }
+.pt-findings-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pt-findings-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.pt-findings-list li { font-size: 0.82rem; }

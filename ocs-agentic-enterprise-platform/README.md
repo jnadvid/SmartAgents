@@ -124,10 +124,11 @@ AgentRunner ──► ExecutionEngine
   definido por agente** (`data_access`): leen fuentes reales para actuar en automático.
 - **Programador de tareas** local (puntual/periódico) que puede **leer un conector antes de
   ejecutar** (p. ej. el bucle del SOC).
-- **Pentesting con Kali** (opt-in, alcance autorizado): **29 herramientas** (nmap, nikto, nuclei,
-  sqlmap, wpscan, amass, enum4linux, dalfox…) en **modo nativo o WSL (Windows + Kali)**, con un
-  **pentest autónomo ADAPTATIVO (PTES/OWASP)** que decide qué lanzar según los hallazgos, informe
-  por fases y **envío por email** — ver [`docs/pentest.md`](docs/pentest.md).
+- **Pentesting con Kali** (opt-in, alcance autorizado): **32 herramientas** (nmap, nuclei,
+  sqlmap, wpscan, amass, enum4linux, dalfox, **Metasploit**…) en **modo nativo o WSL (Windows +
+  Kali)**, con **pentest autónomo ADAPTATIVO (PTES/OWASP)** que decide qué lanzar según los
+  hallazgos, **priorización CVSS automática**, informe por fases y **envío por email** — ver
+  [`docs/pentest.md`](docs/pentest.md).
 - **Ajustes desde la web**: modelo Ollama por defecto, activar pentest, alcance autorizado y
   entorno de ejecución (nativo/WSL), persistidos en la BD (pestaña **Ajustes**).
 - **24 herramientas** deterministas + análisis estático de código: sin Internet, sin comandos
@@ -374,7 +375,7 @@ ocs-agentic-enterprise-platform/
       agents/         # BaseAgent + 45 agentes + squads + registro
       orchestration/  # clasificador, router, planner, motor (+squads), verificador, scorer
       connectors/     # conectores de datos (Wazuh, JSON/CSV, HTTP opt-in) + registro
-      pentest/        # 29 herramientas de Kali + playbook adaptativo (scope, runner native/WSL)
+      pentest/        # 32 herramientas (incl. Metasploit) + playbook adaptativo (scope, runner native/WSL)
       notifications/  # email (SMTP/Gmail)
       llm/            # contrato LLM + OllamaProvider + ModelRouter
       tools/          # BaseTool + 24 herramientas (incl. análisis de código) + registro
@@ -387,7 +388,7 @@ ocs-agentic-enterprise-platform/
     runtime_config.py # ajustes editables (overlay + persistencia en BD)
     scripts/          # seed_use_cases.py (casos de uso de ejemplo)
     data/             # SQLite + documentos + datos de conectores (no versionado)
-    tests/            # 149 tests
+    tests/            # 152 tests
   scripts/            # install-kali-windows.ps1, provision-kali.sh
   examples/           # datos de muestra (alertas Wazuh)
   frontend/           # index.html + app.js + style.css (vanilla, con dashboard)

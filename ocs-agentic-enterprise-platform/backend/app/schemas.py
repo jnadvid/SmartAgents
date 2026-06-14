@@ -520,6 +520,7 @@ class PentestStatusResponse(BaseModel):
     scope_count: int
     execution_mode: str = "native"
     wsl_distro: str = "kali-linux"
+    wordlists: list[str] = []
     profiles: dict[str, list[str]]
     tools: list[PentestToolInfo]
 
@@ -556,6 +557,14 @@ class PentestToolResultOut(BaseModel):
     output: str = ""
 
 
+class FindingOut(BaseModel):
+    tool: str
+    severity: str
+    title: str
+    cve: str = ""
+    score: float = 0.0
+
+
 class PentestRunResponse(BaseModel):
     target: str
     host: str
@@ -563,6 +572,9 @@ class PentestRunResponse(BaseModel):
     message: str
     profile: str = ""
     tools: list[PentestToolResultOut] = []
+    findings: list[FindingOut] = []
+    findings_by_severity: dict[str, int] = {}
+    max_severity: str = "info"
     execution: ExecutionResponse | None = None
     emailed: bool = False
     email_message: str | None = None

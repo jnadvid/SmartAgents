@@ -757,11 +757,13 @@ async function loadPentest() {
   try {
     const s = await api("/pentest/status");
     const avail = s.tools.filter((t) => t.available).map((t) => t.name);
+    el("pt-wordlist").innerHTML = '<option value="">(por defecto)</option>' +
+      (s.wordlists || []).map((w) => `<option value="${escapeHtml(w)}">${escapeHtml(w.split("/").pop())}</option>`).join("");
     const dot = s.enabled && s.scope_configured ? "up" : "down";
     let msg;
-    if (!s.enabled) msg = "Pentest DESACTIVADO. Activa ENABLE_PENTEST_TOOLS=true en .env.";
-    else if (!s.scope_configured) msg = "Sin alcance autorizado: define PENTEST_SCOPE_ALLOWLIST en .env.";
-    else msg = `Activo · ${s.scope_count} entrada(s) de alcance · herramientas instaladas: ${avail.length ? avail.join(", ") : "ninguna detectada"}`;
+    if (!s.enabled) msg = "Pentest DESACTIVADO. Actívalo en Ajustes (o ENABLE_PENTEST_TOOLS).";
+    else if (!s.scope_configured) msg = "Sin alcance autorizado: defínelo en Ajustes (alcance autorizado).";
+    else msg = `Activo · modo ${s.execution_mode} · ${s.scope_count} en alcance · ${avail.length}/${s.tools.length} herramientas instaladas`;
     el("pentest-status").innerHTML = `<span class="status-dot ${dot}"></span> ${escapeHtml(msg)}`;
   } catch (e) { el("pentest-status").textContent = ""; }
 }
@@ -779,7 +781,8 @@ async function runPentest() {
   if (!el("pt-authorized").checked) return toast("Debes confirmar la autorización.", "err");
   const auto = el("pt-auto").checked;
   const email = el("pt-email").value.trim() || null;
-  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: email };
+  const options = el("pt-wordlist").value ? { wordlist: el("pt-wordlist").value } : {};
+  const common = { target, authorized: true, agent_name: el("pt-agent").value, model: el("pt-model").value || null, email_to: email, options };
   const path = auto ? "/pentest/auto" : "/pentest/run";
   const body = auto ? { ...common, aggressive: el("pt-aggressive").checked } : { ...common, profile: el("pt-profile").value };
 
@@ -805,6 +808,7 @@ function renderPentest(r) {
     r.emailed ? `<span class="badge ok">📧 enviado</span>` : (r.email_message ? `<span class="badge err">📧 ${escapeHtml(r.email_message)}</span>` : ""),
     `<span class="badge">${escapeHtml(r.message)}</span>`,
   ].join(" ");
+  renderFindings(r);
   el("pt-tools").innerHTML = (r.tools || []).map((t) =>
     `<div class="pt-tool"><div class="pt-tool-head"><strong>${escapeHtml(t.tool_name)}</strong>
       ${t.phase ? `<span class="badge">${escapeHtml(t.phase)}</span>` : ""}
@@ -817,6 +821,23 @@ function renderPentest(r) {
     ? renderMarkdown(r.execution.final_output)
     : `<p class="muted">${escapeHtml(r.status === "completed" ? "Sin informe." : r.message)}</p>`;
   if (r.execution && r.execution.execution_id) LAST_EXECUTION_ID = r.execution.execution_id;
+}
+
+const SEV_KIND = { critical: "err", high: "err", medium: "warn", low: "", info: "" };
+function renderFindings(r) {
+  const findings = r.findings || [];
+  const box = el("pt-findings");
+  if (!findings.length) { box.innerHTML = ""; return; }
+  const counts = r.findings_by_severity || {};
+  const chips = ["critical", "high", "medium", "low", "info"].filter((s) => counts[s])
+    .map((s) => `<span class="badge ${SEV_KIND[s] || ""}">${s}: ${counts[s]}</span>`).join(" ");
+  const rows = findings.slice(0, 25).map((f) =>
+    `<li><span class="badge ${SEV_KIND[f.severity] || ""}">${escapeHtml(f.severity)}</span>
+      ${escapeHtml(f.title)} ${f.cve ? `<span class="badge accent">${escapeHtml(f.cve)}</span>` : ""}
+      <span class="muted">· ${escapeHtml(f.tool)}</span></li>`).join("");
+  box.innerHTML = `<div class="pt-findings-box"><div class="pt-findings-head">
+      <strong>🚩 Hallazgos priorizados</strong> ${chips}</div>
+      <ol class="pt-findings-list">${rows}</ol></div>`;
 }
 
 // --------------------------------------------------------------------------

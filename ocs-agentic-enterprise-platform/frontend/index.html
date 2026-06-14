@@ -23,7 +23,7 @@
       <div class="sidebar-foot">
         <div class="status-line" id="status-api"><span class="dot"></span><span class="status-label">API</span><span class="status-val">…</span></div>
         <div class="status-line" id="status-ollama"><span class="dot"></span><span class="status-label">Ollama</span><span class="status-val">…</span></div>
-        <div class="version">v0.8 · Fase 3 · 100% local</div>
+        <div class="version">v0.9 · Fase 3 · 100% local</div>
       </div>
     </aside>
 
@@ -353,6 +353,9 @@
             <label class="lbl">Modelo Ollama</label>
             <select id="pt-model" class="input"><option value="">(modelo por defecto)</option></select>
 
+            <label class="lbl">Wordlist <span class="lbl-dim">(fuzzing de directorios)</span></label>
+            <select id="pt-wordlist" class="input"><option value="">(por defecto)</option></select>
+
             <label class="lbl">Enviar informe a <span class="lbl-dim">(email, opcional)</span></label>
             <input id="pt-email" class="input" placeholder="informes@miempresa.com" />
 
@@ -374,6 +377,7 @@
             </div>
             <div id="pt-result" class="hidden">
               <div class="result-badges" id="pt-meta"></div>
+              <div id="pt-findings"></div>
               <details class="acc" open><summary>🛠️ Salida de herramientas</summary>
                 <div id="pt-tools" class="pt-tools"></div></details>
               <h4 class="mt">Informe del agente</h4>
