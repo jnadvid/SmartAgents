@@ -45,43 +45,93 @@ class AgentRegistry:
 
 
 def build_default_registry() -> AgentRegistry:
-    """Construye el registro con los 16 agentes del MVP."""
+    """Construye el registro con los 36 agentes especializados por áreas."""
+    from app.agents.agile_coach_agent import AgileCoachAgent
+    from app.agents.appsec_engineer_agent import AppSecEngineerAgent
+    from app.agents.backend_developer_agent import BackendDeveloperAgent
     from app.agents.business_assistant_agent import BusinessAssistantAgent
+    from app.agents.code_reviewer_agent import CodeReviewerAgent
     from app.agents.compliance_agent import ComplianceAgent
     from app.agents.customer_support_agent import CustomerSupportAgent
     from app.agents.cyber_threat_analyst_agent import CyberThreatAnalystAgent
     from app.agents.data_analyst_agent import DataAnalystAgent
+    from app.agents.data_protection_officer_agent import DataProtectionOfficerAgent
+    from app.agents.database_engineer_agent import DatabaseEngineerAgent
+    from app.agents.devops_engineer_agent import DevOpsEngineerAgent
     from app.agents.document_audit_agent import DocumentAuditAgent
     from app.agents.document_writer_agent import DocumentWriterAgent
     from app.agents.finance_agent import FinanceAgent
+    from app.agents.frontend_developer_agent import FrontendDeveloperAgent
     from app.agents.hr_training_agent import HRTrainingAgent
+    from app.agents.incident_responder_agent import IncidentResponderAgent
     from app.agents.legal_document_agent import LegalDocumentAgent
     from app.agents.market_research_agent import MarketResearchAgent
+    from app.agents.operations_manager_agent import OperationsManagerAgent
+    from app.agents.organizational_psychologist_agent import OrganizationalPsychologistAgent
+    from app.agents.people_ops_agent import PeopleOpsAgent
     from app.agents.project_manager_agent import ProjectManagerAgent
     from app.agents.prompt_injection_tester_agent import PromptInjectionTesterAgent
+    from app.agents.qa_test_engineer_agent import QATestEngineerAgent
+    from app.agents.recruiter_agent import RecruiterAgent
     from app.agents.report_agent import ReportAgent
     from app.agents.sales_proposal_agent import SalesProposalAgent
+    from app.agents.software_architect_agent import SoftwareArchitectAgent
+    from app.agents.strategy_consultant_agent import StrategyConsultantAgent
+    from app.agents.technical_writer_agent import TechnicalWriterAgent
+    from app.agents.threat_intel_analyst_agent import ThreatIntelAnalystAgent
+    from app.agents.ux_psychologist_agent import UXPsychologistAgent
     from app.agents.vulnerability_triage_agent import VulnerabilityTriageAgent
+    from app.agents.wellbeing_coach_agent import WellbeingCoachAgent
 
     registry = AgentRegistry()
     registry.register_all(
         [
+            # --- Negocio ---
             BusinessAssistantAgent(),
+            StrategyConsultantAgent(),
+            OperationsManagerAgent(),
+            # --- Documentos / datos / investigación ---
             DocumentWriterAgent(),
-            DataAnalystAgent(),
-            LegalDocumentAgent(),
-            SalesProposalAgent(),
-            MarketResearchAgent(),
-            FinanceAgent(),
-            ProjectManagerAgent(),
-            HRTrainingAgent(),
-            CustomerSupportAgent(),
-            ReportAgent(),
-            CyberThreatAnalystAgent(),
-            ComplianceAgent(),
             DocumentAuditAgent(),
+            DataAnalystAgent(),
+            MarketResearchAgent(),
+            ReportAgent(),
+            # --- Ventas / finanzas / legal ---
+            SalesProposalAgent(),
+            FinanceAgent(),
+            LegalDocumentAgent(),
+            # --- Proyectos ---
+            ProjectManagerAgent(),
+            AgileCoachAgent(),
+            # --- RRHH ---
+            HRTrainingAgent(),
+            RecruiterAgent(),
+            PeopleOpsAgent(),
+            # --- Soporte ---
+            CustomerSupportAgent(),
+            # --- Programación ---
+            SoftwareArchitectAgent(),
+            BackendDeveloperAgent(),
+            FrontendDeveloperAgent(),
+            CodeReviewerAgent(),
+            QATestEngineerAgent(),
+            DevOpsEngineerAgent(),
+            DatabaseEngineerAgent(),
+            TechnicalWriterAgent(),
+            # --- Ciberseguridad ---
+            CyberThreatAnalystAgent(),
             VulnerabilityTriageAgent(),
+            IncidentResponderAgent(),
+            ThreatIntelAnalystAgent(),
+            AppSecEngineerAgent(),
             PromptInjectionTesterAgent(),
+            # --- Compliance ---
+            ComplianceAgent(),
+            DataProtectionOfficerAgent(),
+            # --- Psicología ---
+            OrganizationalPsychologistAgent(),
+            UXPsychologistAgent(),
+            WellbeingCoachAgent(),
         ]
     )
     return registry

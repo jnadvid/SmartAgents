@@ -33,6 +33,33 @@ INTENT_CATEGORIES: tuple[str, ...] = (
     "compliance_analysis",
     "vulnerability_triage",
     "prompt_security_testing",
+    # Programación
+    "software_architecture",
+    "backend_development",
+    "frontend_development",
+    "code_review",
+    "software_testing",
+    "devops_ci_cd",
+    "database_engineering",
+    "technical_documentation",
+    # Ciberseguridad (especializada)
+    "incident_response",
+    "threat_intelligence",
+    "application_security",
+    # Psicología
+    "organizational_psychology",
+    "ux_psychology",
+    "wellbeing",
+    # Negocio / operaciones (especializado)
+    "business_strategy",
+    "operations_management",
+    # RRHH (especializado)
+    "recruitment",
+    "people_operations",
+    # Compliance (especializado)
+    "data_protection",
+    # Proyectos (especializado)
+    "agile_coaching",
 )
 
 # Palabras clave normalizadas (minúsculas, sin acentos).
@@ -156,6 +183,164 @@ INTENT_KEYWORDS: dict[str, dict[str, list[str]]] = {
             "organiza mi", "plan de accion", "decision estrategica",
         ],
         "weak": ["negocio", "empresa", "reunion", "organizacion", "decision"],
+    },
+    # ----------------------------- Programación -----------------------------
+    "software_architecture": {
+        "strong": [
+            "arquitectura de software", "diseno de arquitectura", "patron de diseno",
+            "microservicios", "monolito", "diagrama de componentes", "adr",
+            "escalabilidad del sistema", "diseno del sistema",
+        ],
+        "weak": ["arquitectura"],
+    },
+    "backend_development": {
+        "strong": [
+            "escribe codigo", "implementa una funcion", "api rest", "endpoint",
+            "crea una clase", "funcion en python", "implementa el backend",
+            "logica de negocio en", "programa una funcion",
+        ],
+        "weak": ["backend", "codigo", "funcion", "script", "programar"],
+    },
+    "frontend_development": {
+        "strong": [
+            "componente react", "interfaz de usuario", "maqueta la pantalla",
+            "formulario web", "diseno responsive", "vue", "tailwind", "hoja de estilos",
+        ],
+        "weak": ["frontend", "css", "html", "ui", "boton"],
+    },
+    "code_review": {
+        "strong": [
+            "revisa este codigo", "revision de codigo", "code review", "revisa el codigo",
+            "analiza este codigo", "calidad del codigo", "refactoriza", "refactor",
+        ],
+        "weak": ["revisar codigo", "mantenibilidad"],
+    },
+    "software_testing": {
+        "strong": [
+            "test unitario", "tests unitarios", "pruebas unitarias", "casos de prueba",
+            "test de integracion", "cobertura de tests", "pytest", "genera tests",
+            "plan de pruebas",
+        ],
+        "weak": ["testing", "qa"],
+    },
+    "devops_ci_cd": {
+        "strong": [
+            "ci/cd", "pipeline de despliegue", "github actions", "dockerfile",
+            "kubernetes", "infraestructura como codigo", "terraform",
+            "despliegue continuo", "integracion continua",
+        ],
+        "weak": ["docker", "devops", "pipeline"],
+    },
+    "database_engineering": {
+        "strong": [
+            "esquema de base de datos", "modelo de datos", "consulta sql",
+            "optimiza esta consulta", "indices de base de datos", "normalizacion",
+            "diseno de base de datos", "migracion de base de datos",
+        ],
+        "weak": ["sql", "base de datos"],
+    },
+    "technical_documentation": {
+        "strong": [
+            "documenta el codigo", "documentacion tecnica", "escribe el readme",
+            "documenta la api", "docstring", "documentacion del codigo", "manual tecnico",
+        ],
+        "weak": ["readme"],
+    },
+    # ------------------------- Ciberseguridad (esp.) ------------------------
+    "incident_response": {
+        "strong": [
+            "respuesta a incidentes", "incident response", "plan de respuesta a incidentes",
+            "contencion del incidente", "dfir", "erradicacion", "recuperacion tras incidente",
+            "forense digital",
+        ],
+        "weak": [],
+    },
+    "threat_intelligence": {
+        "strong": [
+            "inteligencia de amenazas", "threat intel", "cti", "actor de amenazas",
+            "ttps", "indicadores de compromiso", "campana de amenazas", "diamond model",
+        ],
+        "weak": [],
+    },
+    "application_security": {
+        "strong": [
+            "seguridad de la aplicacion", "appsec", "owasp", "modelado de amenazas",
+            "stride", "analisis sast", "auditoria de seguridad del codigo",
+            "vulnerabilidad en el codigo", "codigo seguro",
+        ],
+        "weak": [],
+    },
+    # ------------------------------ Psicología ------------------------------
+    "organizational_psychology": {
+        "strong": [
+            "psicologia organizacional", "clima laboral", "dinamica de equipo",
+            "gestion del cambio", "motivacion del equipo", "seguridad psicologica",
+            "cultura de equipo", "cohesion del equipo",
+        ],
+        "weak": ["motivacion", "liderazgo"],
+    },
+    "ux_psychology": {
+        "strong": [
+            "psicologia del usuario", "carga cognitiva", "sesgos cognitivos",
+            "ux research", "patron oscuro", "comportamiento del usuario", "diseno persuasivo",
+        ],
+        "weak": ["ux", "usabilidad"],
+    },
+    "wellbeing": {
+        "strong": [
+            "bienestar laboral", "prevencion del burnout", "burnout", "gestion del estres",
+            "salud laboral", "estres en el trabajo", "agotamiento profesional",
+        ],
+        "weak": ["bienestar"],
+    },
+    # ----------------------- Negocio / operaciones (esp.) -------------------
+    "business_strategy": {
+        "strong": [
+            "estrategia competitiva", "estrategia corporativa", "ventaja competitiva",
+            "modelo de negocio", "analisis dafo", "swot", "cinco fuerzas", "go to market",
+        ],
+        "weak": [],
+    },
+    "operations_management": {
+        "strong": [
+            "mejora de procesos", "optimizacion de procesos", "cuello de botella",
+            "eficiencia operativa", "lean", "six sigma", "procedimiento operativo",
+            "gestion de operaciones",
+        ],
+        "weak": ["operaciones"],
+    },
+    # ------------------------------ RRHH (esp.) -----------------------------
+    "recruitment": {
+        "strong": [
+            "descripcion de puesto", "oferta de empleo", "proceso de seleccion",
+            "entrevista de trabajo", "reclutamiento", "criterios de cribado",
+            "perfil del candidato", "contratar a",
+        ],
+        "weak": ["seleccion", "candidato", "vacante"],
+    },
+    "people_operations": {
+        "strong": [
+            "evaluacion del desempeno", "plan de carrera", "gestion del desempeno",
+            "people ops", "politica de personal", "retencion de talento", "feedback al empleado",
+        ],
+        "weak": [],
+    },
+    # --------------------------- Compliance (esp.) --------------------------
+    "data_protection": {
+        "strong": [
+            "delegado de proteccion de datos", "dpo", "registro de actividades de tratamiento",
+            "tratamiento de datos personales", "eipd", "dpia", "bases de legitimacion",
+            "encargado del tratamiento",
+        ],
+        "weak": [],
+    },
+    # ---------------------------- Proyectos (esp.) --------------------------
+    "agile_coaching": {
+        "strong": [
+            "scrum", "kanban", "agile coach", "retrospectiva", "daily standup",
+            "ceremonias agiles", "refinamiento del backlog", "tablero kanban",
+        ],
+        "weak": ["agil", "backlog"],
     },
 }
 

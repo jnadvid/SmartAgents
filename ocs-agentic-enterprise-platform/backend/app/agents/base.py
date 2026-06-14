@@ -246,6 +246,36 @@ class BaseAgent:
         }
 
 
+_CODE_MARKERS = (
+    "def ", "class ", "import ", "function ", "const ", "let ", "=>", "public ",
+    "private ", "void ", "func ", "fn ", "#include", "return ", "self.", "->",
+    "println", "console.log", "</", "/>", "{", "};", "() {",
+)
+
+
+def looks_like_code(text: str) -> bool:
+    """Heurística compartida: ¿el texto parece código fuente?"""
+    if not text:
+        return False
+    if "```" in text:
+        return True
+    lowered = text.lower()
+    distinct = sum(1 for marker in _CODE_MARKERS if marker in lowered)
+    # Señal adicional: varias líneas indentadas o con punto y coma final.
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    indented = sum(1 for ln in lines if ln[:1] in (" ", "\t"))
+    semicolons = sum(1 for ln in lines if ln.rstrip().endswith((";", "{", "}", ":")))
+    return distinct >= 3 or (distinct >= 1 and (indented >= 3 or semicolons >= 3))
+
+
+def pick_code_text(ctx: "AgentContext") -> str | None:
+    """Devuelve el mejor candidato a 'código' entre el contexto y la tarea."""
+    for candidate in (ctx.extra_context or "", ctx.task or ""):
+        if candidate and looks_like_code(candidate):
+            return candidate
+    return None
+
+
 def looks_tabular(text: str) -> bool:
     """Heurística compartida: ¿el texto contiene datos tabulares?"""
     lines = [line for line in (text or "").splitlines() if line.strip()]

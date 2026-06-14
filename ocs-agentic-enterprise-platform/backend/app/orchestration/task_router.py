@@ -28,6 +28,33 @@ INTENT_AGENT_MAP: dict[str, str] = {
     "compliance_analysis": "compliance",
     "vulnerability_triage": "vulnerability_triage",
     "prompt_security_testing": "prompt_injection_tester",
+    # Programación
+    "software_architecture": "software_architect",
+    "backend_development": "backend_developer",
+    "frontend_development": "frontend_developer",
+    "code_review": "code_reviewer",
+    "software_testing": "qa_test_engineer",
+    "devops_ci_cd": "devops_engineer",
+    "database_engineering": "database_engineer",
+    "technical_documentation": "technical_writer",
+    # Ciberseguridad (especializada)
+    "incident_response": "incident_responder",
+    "threat_intelligence": "threat_intel_analyst",
+    "application_security": "appsec_engineer",
+    # Psicología
+    "organizational_psychology": "organizational_psychologist",
+    "ux_psychology": "ux_psychologist",
+    "wellbeing": "wellbeing_coach",
+    # Negocio / operaciones (especializado)
+    "business_strategy": "strategy_consultant",
+    "operations_management": "operations_manager",
+    # RRHH (especializado)
+    "recruitment": "recruiter",
+    "people_operations": "people_ops",
+    # Compliance (especializado)
+    "data_protection": "data_protection_officer",
+    # Proyectos (especializado)
+    "agile_coaching": "agile_coach",
 }
 
 # Agentes auxiliares PROPUESTOS por intención (su ejecución es opcional y
@@ -40,6 +67,21 @@ AUXILIARY_AGENTS_MAP: dict[str, list[str]] = {
     "market_research": ["report"],
     "finance_analysis": ["report"],
     "data_analysis": ["report"],
+    # Programación: el revisor y QA complementan al desarrollo
+    "backend_development": ["code_reviewer"],
+    "frontend_development": ["code_reviewer"],
+    "software_architecture": ["backend_developer"],
+    "code_review": ["appsec_engineer"],
+    "database_engineering": ["appsec_engineer"],
+    # Ciberseguridad especializada
+    "incident_response": ["threat_intel_analyst", "report"],
+    "threat_intelligence": ["report"],
+    "application_security": ["code_reviewer"],
+    # Negocio / RRHH / compliance
+    "business_strategy": ["market_research"],
+    "operations_management": ["report"],
+    "recruitment": ["people_ops"],
+    "data_protection": ["compliance"],
 }
 
 FALLBACK_AGENT = "business_assistant"
