@@ -3,6 +3,7 @@
 
 const API = "";
 let AGENTS = [];
+let SQUADS = [];
 let LAST_EXECUTION_ID = null;
 
 // --------------------------------------------------------------------------
@@ -14,12 +15,16 @@ const ICONS = {
   executions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
   documents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg>',
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2 2.5-2.5z"/></svg>',
+  agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 14c2.5 0 5 1.6 5 4.5"/></svg>',
+  scheduler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M5 3 2 6M19 3l3 3"/></svg>',
 };
 
 const VIEWS = [
   { id: "dashboard", label: "Dashboard", sub: "Visión general de la plataforma" },
-  { id: "assistant", label: "Asistente", sub: "Lanza una tarea a los agentes" },
+  { id: "assistant", label: "Asistente", sub: "Lanza una tarea a un agente o equipo" },
+  { id: "agents", label: "Agentes", sub: "Catálogo por áreas y equipos" },
   { id: "executions", label: "Ejecuciones", sub: "Histórico y trazabilidad" },
+  { id: "scheduler", label: "Programador", sub: "Tareas puntuales y periódicas" },
   { id: "documents", label: "Documentos", sub: "RAG local: subida y búsqueda" },
   { id: "tools", label: "Herramientas", sub: "Catálogo de herramientas locales" },
 ];
@@ -133,7 +138,9 @@ function switchView(id) {
   el("page-title").textContent = v.label;
   el("page-subtitle").textContent = v.sub;
   if (id === "dashboard") loadMetrics();
+  if (id === "agents") loadAgentsView();
   if (id === "executions") loadExecutions();
+  if (id === "scheduler") loadScheduler();
   if (id === "documents") loadDocuments();
 }
 
@@ -209,7 +216,62 @@ async function loadAgents() {
     el("agent-select").innerHTML = AGENTS.map((a) =>
       `<option value="${escapeHtml(a.name)}">${escapeHtml(a.display_name)} — ${escapeHtml(a.category)}</option>`).join("");
     updateAgentHint();
+    buildTeamChecklist("team-agents");
+    buildTeamChecklist("sched-team-agents");
+    if (el("sched-agent")) el("sched-agent").innerHTML = AGENTS.map((a) =>
+      `<option value="${escapeHtml(a.name)}">${escapeHtml(a.display_name)} — ${escapeHtml(a.category)}</option>`).join("");
   } catch (_) {}
+}
+
+// Etiquetas legibles para las áreas (categorías) de agentes.
+const AREA_LABELS = {
+  programming: "💻 Programación", cybersecurity: "🛡️ Ciberseguridad", business: "📈 Negocio",
+  psychology: "🧠 Psicología", compliance: "⚖️ Compliance", hr: "👥 RRHH",
+  projects: "🗂️ Proyectos", finance: "💰 Finanzas", legal: "📜 Legal", sales: "🤝 Ventas",
+  data: "📊 Datos", documents: "📄 Documentos", reporting: "📰 Informes",
+  research: "🔎 Investigación", customer_support: "🎧 Soporte", security_testing: "🔐 Seguridad de prompts",
+};
+function areaLabel(cat) { return AREA_LABELS[cat] || cat; }
+
+async function loadAgentsView() {
+  if (!AGENTS.length) { try { AGENTS = await api("/agents"); } catch (_) {} }
+  el("agents-count").textContent = `${AGENTS.length} agentes · ${new Set(AGENTS.map((a) => a.category)).size} áreas`;
+  const byArea = {};
+  AGENTS.forEach((a) => { (byArea[a.category] = byArea[a.category] || []).push(a); });
+  el("agents-by-area").innerHTML = Object.keys(byArea).sort().map((cat) =>
+    `<div class="area-block"><h4>${escapeHtml(areaLabel(cat))} · ${byArea[cat].length}</h4>
+      <div class="agent-cards">${byArea[cat].map((a) =>
+        `<div class="agent-card"><div class="agent-card-head"><strong>${escapeHtml(a.display_name)}</strong>
+          <button class="btn ghost xs" data-use-agent="${escapeHtml(a.name)}">Usar</button></div>
+          <p>${escapeHtml(a.description)}</p>
+          <div class="agent-tools">${(a.allowed_tools || []).map((t) => `<span class="tool-chip">${escapeHtml(t)}</span>`).join("") || '<span class="muted">sin herramientas</span>'}</div>
+        </div>`).join("")}</div></div>`).join("");
+  el("agents-by-area").querySelectorAll("[data-use-agent]").forEach((b) =>
+    b.addEventListener("click", () => useAgentInAssistant(b.dataset.useAgent)));
+
+  if (!SQUADS.length) await loadSquads();
+  el("squads-list").innerHTML = SQUADS.map((s) =>
+    `<div class="squad-card"><div class="agent-card-head"><strong>${escapeHtml(s.display_name)}</strong>
+      <button class="btn ghost xs" data-use-squad="${escapeHtml(s.name)}">Usar</button></div>
+      <p>${escapeHtml(s.description)}</p>
+      <div class="squad-chain">${s.members.map((m) => `<span class="chain-step">${escapeHtml(m)}</span>`).join('<span class="chain-arrow">→</span>')}</div>
+    </div>`).join("") || '<div class="chart-empty">Sin equipos.</div>';
+  el("squads-list").querySelectorAll("[data-use-squad]").forEach((b) =>
+    b.addEventListener("click", () => useSquadInAssistant(b.dataset.useSquad)));
+}
+
+function useAgentInAssistant(name) {
+  switchView("assistant");
+  setMode("manual");
+  el("agent-select").value = name; updateAgentHint();
+  el("task-input").focus();
+}
+function useSquadInAssistant(name) {
+  switchView("assistant");
+  setMode("team");
+  setTeamKind("squad");
+  el("squad-select").value = name; updateSquadHint();
+  el("task-input").focus();
 }
 function updateAgentHint() {
   const a = AGENTS.find((x) => x.name === el("agent-select").value);
@@ -219,9 +281,45 @@ function updateAgentHint() {
 async function loadModels() {
   try {
     const models = await api("/models");
-    el("model-select").innerHTML = '<option value="">(modelo por defecto)</option>' +
+    const opts = '<option value="">(modelo por defecto)</option>' +
       models.map((m) => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`).join("");
+    el("model-select").innerHTML = opts;
+    if (el("sched-model")) el("sched-model").innerHTML = opts;
   } catch (_) { el("model-select").innerHTML = '<option value="">(Ollama no disponible)</option>'; }
+}
+
+async function loadSquads() {
+  try {
+    SQUADS = await api("/agents/squads");
+    const sel = el("squad-select");
+    if (sel) {
+      sel.innerHTML = SQUADS.map((s) =>
+        `<option value="${escapeHtml(s.name)}">${escapeHtml(s.display_name)} (${s.members.length})</option>`).join("");
+      updateSquadHint();
+    }
+    if (el("sched-squad")) {
+      el("sched-squad").innerHTML = SQUADS.map((s) =>
+        `<option value="${escapeHtml(s.name)}">${escapeHtml(s.display_name)}</option>`).join("");
+    }
+  } catch (_) {}
+}
+
+function updateSquadHint() {
+  const s = SQUADS.find((x) => x.name === el("squad-select").value);
+  el("squad-description").textContent = s ? `${s.description} · Cadena: ${s.members.join(" → ")}` : "";
+}
+
+// Casillas de agentes para componer un equipo ad-hoc.
+function buildTeamChecklist(containerId) {
+  const c = el(containerId);
+  if (!c) return;
+  c.innerHTML = AGENTS.map((a) =>
+    `<label class="chk-item"><input type="checkbox" value="${escapeHtml(a.name)}" />
+      <span>${escapeHtml(a.display_name)}</span><span class="chk-cat">${escapeHtml(a.category)}</span></label>`).join("");
+}
+
+function checkedValues(containerId) {
+  return [...el(containerId).querySelectorAll("input:checked")].map((i) => i.value);
 }
 
 async function loadTools() {
@@ -241,6 +339,28 @@ async function loadTools() {
 // --------------------------------------------------------------------------
 function currentMode() { return el("mode-seg").querySelector(".seg-btn.active").dataset.mode; }
 
+function setMode(mode) {
+  el("mode-seg").querySelectorAll(".seg-btn").forEach((x) => x.classList.toggle("active", x.dataset.mode === mode));
+  applyMode();
+}
+function applyMode() {
+  const mode = currentMode();
+  el("agent-select-wrap").classList.toggle("hidden", mode !== "manual");
+  el("squad-select-wrap").classList.toggle("hidden", mode !== "team");
+  el("btn-execute").textContent = mode === "team" ? "Ejecutar equipo" : "Ejecutar tarea";
+  el("btn-route").classList.toggle("hidden", mode === "team");
+}
+function teamKind() { return el("team-seg").querySelector(".seg-btn.active").dataset.team; }
+function setTeamKind(kind) {
+  el("team-seg").querySelectorAll(".seg-btn").forEach((x) => x.classList.toggle("active", x.dataset.team === kind));
+  applyTeamKind();
+}
+function applyTeamKind() {
+  const kind = teamKind();
+  el("squad-predef-wrap").classList.toggle("hidden", kind !== "squad");
+  el("squad-custom-wrap").classList.toggle("hidden", kind !== "custom");
+}
+
 async function previewRoute() {
   const task = el("task-input").value.trim();
   if (!task) return toast("Escribe una tarea primero.", "err");
@@ -256,19 +376,34 @@ async function previewRoute() {
 async function executeTask() {
   const task = el("task-input").value.trim();
   if (!task) return toast("Escribe una tarea primero.", "err");
-  const body = {
+  const mode = currentMode();
+  const common = {
     task,
-    agent_name: currentMode() === "manual" ? el("agent-select").value : null,
     model: el("model-select").value || null,
     use_documents: el("use-documents").checked,
     extra_context: el("context-input").value.trim() || null,
   };
+  let path = "/agents/execute", body;
+  if (mode === "team") {
+    body = { ...common };
+    if (teamKind() === "squad") {
+      body.squad_name = el("squad-select").value;
+    } else {
+      const members = checkedValues("team-agents");
+      if (members.length < 2) return toast("Selecciona al menos 2 agentes para el equipo.", "err");
+      body.agent_names = members;
+    }
+    path = "/agents/squads/execute";
+  } else {
+    body = { ...common, agent_name: mode === "manual" ? el("agent-select").value : null };
+  }
+
   el("result-empty").classList.add("hidden");
   el("result-content").classList.add("hidden");
   el("result-loading").classList.remove("hidden");
   el("btn-execute").disabled = true;
   try {
-    const r = await api("/agents/execute", { method: "POST", body: JSON.stringify(body) });
+    const r = await api(path, { method: "POST", body: JSON.stringify(body) });
     renderResult(r);
   } catch (e) {
     el("result-content").classList.remove("hidden");
@@ -399,6 +534,155 @@ async function searchDocuments() {
 }
 
 // --------------------------------------------------------------------------
+// Programador de tareas
+// --------------------------------------------------------------------------
+function schedBadge(status) {
+  const map = { scheduled: "ok", paused: "warn", finished: "", error: "err" };
+  return `<span class="badge ${map[status] ?? ""}">${escapeHtml(status)}</span>`;
+}
+
+function applySchedTarget() {
+  const kind = el("sched-target-kind").value;
+  el("sched-agent-wrap").classList.toggle("hidden", kind !== "agent");
+  el("sched-squad-wrap").classList.toggle("hidden", kind !== "squad");
+  el("sched-team-wrap").classList.toggle("hidden", kind !== "team");
+}
+function applySchedKind() {
+  const kind = el("sched-kind").value;
+  [["once", "sched-once-wrap"], ["interval", "sched-interval-wrap"], ["daily", "sched-daily-wrap"],
+   ["weekly", "sched-weekly-wrap"], ["cron", "sched-cron-wrap"]].forEach(([k, id]) =>
+    el(id).classList.toggle("hidden", kind !== k));
+}
+
+async function loadScheduler() {
+  await loadSchedulerStatus();
+  await loadScheduledTasks();
+}
+
+async function loadSchedulerStatus() {
+  try {
+    const s = await api("/scheduler/status");
+    const next = s.next_run_at ? new Date(s.next_run_at).toLocaleString() : "—";
+    const dot = s.running ? "up" : "down";
+    el("scheduler-status").innerHTML =
+      `<span class="status-dot ${dot}"></span> Programador ${s.running ? "activo" : (s.enabled ? "habilitado" : "desactivado")}
+       · sondeo cada ${s.poll_seconds}s · ${s.active_tasks}/${s.total_tasks} activas · próxima: ${escapeHtml(next)}`;
+  } catch (e) { el("scheduler-status").textContent = ""; }
+}
+
+async function loadScheduledTasks() {
+  const tbody = el("sched-table").querySelector("tbody");
+  try {
+    const tasks = await api("/scheduler/tasks");
+    if (!tasks.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay tareas programadas.</td></tr>'; return; }
+    tbody.innerHTML = tasks.map((t) => {
+      const target = t.target_kind === "auto" ? "Auto"
+        : t.target_kind === "team" ? `Equipo: ${escapeHtml(t.agent_names.join(", "))}`
+        : `${t.target_kind}: ${escapeHtml(t.target_ref)}`;
+      const next = t.next_run_at ? new Date(t.next_run_at).toLocaleString() : "—";
+      const toggle = t.enabled
+        ? `<button class="btn ghost xs" data-sched-pause="${t.id}">⏸</button>`
+        : `<button class="btn ghost xs" data-sched-resume="${t.id}">▶</button>`;
+      return `<tr><td><strong>${escapeHtml(t.name)}</strong><div class="doc-meta">#${t.id}</div></td>
+        <td>${target}</td><td>${escapeHtml(t.schedule_human)}</td>
+        <td>${escapeHtml(next)}</td><td>${schedBadge(t.status)}${t.last_status ? ` <span class="badge">${escapeHtml(t.last_status)}</span>` : ""}</td>
+        <td>${t.run_count}</td>
+        <td class="sched-actions">${toggle}
+          <button class="btn ghost xs" data-sched-run="${t.id}" title="Ejecutar ahora">▶▶</button>
+          <button class="btn ghost xs" data-sched-view="${t.id}" title="Histórico">👁</button>
+          <button class="btn ghost xs" data-sched-del="${t.id}" title="Borrar">🗑</button></td></tr>`;
+    }).join("");
+    bindSchedActions();
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="7" class="muted">${escapeHtml(e.message)}</td></tr>`; }
+}
+
+function bindSchedActions() {
+  const q = (sel, fn) => el("sched-table").querySelectorAll(sel).forEach((b) => b.addEventListener("click", fn));
+  q("[data-sched-pause]", (e) => schedAction(e.currentTarget.dataset.schedPause, "pause"));
+  q("[data-sched-resume]", (e) => schedAction(e.currentTarget.dataset.schedResume, "resume"));
+  q("[data-sched-run]", (e) => schedRunNow(e.currentTarget.dataset.schedRun));
+  q("[data-sched-view]", (e) => showSchedDetail(e.currentTarget.dataset.schedView));
+  q("[data-sched-del]", (e) => schedDelete(e.currentTarget.dataset.schedDel));
+}
+
+async function schedAction(id, action) {
+  try { await api(`/scheduler/tasks/${id}/${action}`, { method: "POST" }); toast("Tarea actualizada.", "ok"); loadScheduler(); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function schedRunNow(id) {
+  toast("Ejecutando…");
+  try {
+    const run = await api(`/scheduler/tasks/${id}/run-now`, { method: "POST" });
+    toast(`Ejecutada: ${run.status}`, run.status === "completed" ? "ok" : "warn");
+    loadScheduler();
+    if (run.execution_id) { switchView("executions"); showExecutionDetail(run.execution_id); }
+  } catch (e) { toast(e.message, "err"); }
+}
+async function schedDelete(id) {
+  if (!confirm("¿Borrar esta tarea programada?")) return;
+  try { await fetch(`/scheduler/tasks/${id}`, { method: "DELETE" }); toast("Tarea borrada.", "ok"); loadScheduler(); }
+  catch (e) { toast(e.message, "err"); }
+}
+
+async function showSchedDetail(id) {
+  try {
+    const t = await api(`/scheduler/tasks/${id}`);
+    const runs = (t.runs || []).map((r) =>
+      `<li><span class="badge ${r.status === "completed" ? "ok" : r.status === "failed" || r.status === "error" ? "err" : "warn"}">${escapeHtml(r.status)}</span>
+        ${new Date(r.started_at).toLocaleString()}${r.execution_id ? ` · <a href="#" data-exec-link="${r.execution_id}">ejecución #${r.execution_id}</a>` : ""}
+        ${r.message ? `<div class="doc-meta">${escapeHtml(r.message)}</div>` : ""}</li>`).join("") || "<li class='muted'>Sin ejecuciones todavía.</li>";
+    const d = el("sched-detail");
+    d.classList.remove("hidden");
+    d.innerHTML = `<h4>${escapeHtml(t.name)} · histórico</h4><div class="doc-meta">${escapeHtml(t.schedule_human)} · ${escapeHtml(t.timezone)}</div>
+      <ul class="search-results">${runs}</ul>`;
+    d.querySelectorAll("[data-exec-link]").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault(); switchView("executions"); showExecutionDetail(a.dataset.execLink);
+    }));
+    d.scrollIntoView({ behavior: "smooth" });
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function createScheduledTask() {
+  const name = el("sched-name").value.trim();
+  const task = el("sched-task").value.trim();
+  if (!name || !task) return toast("Indica nombre y tarea.", "err");
+  const targetKind = el("sched-target-kind").value;
+  const kind = el("sched-kind").value;
+  const payload = {
+    name, task,
+    extra_context: el("sched-context").value.trim() || null,
+    model: el("sched-model").value || null,
+    use_documents: el("sched-docs").checked,
+    target_kind: targetKind,
+    schedule_kind: kind,
+    timezone: el("sched-tz").value.trim() || "UTC",
+  };
+  if (targetKind === "agent") payload.target_ref = el("sched-agent").value;
+  else if (targetKind === "squad") payload.target_ref = el("sched-squad").value;
+  else if (targetKind === "team") {
+    payload.agent_names = checkedValues("sched-team-agents");
+    if (payload.agent_names.length < 2) return toast("Selecciona al menos 2 agentes.", "err");
+  }
+  if (kind === "once") {
+    if (!el("sched-runat").value) return toast("Indica fecha y hora.", "err");
+    payload.run_at = new Date(el("sched-runat").value).toISOString();
+  } else if (kind === "interval") payload.interval_minutes = parseInt(el("sched-interval").value, 10);
+  else if (kind === "daily") payload.time_of_day = el("sched-daily-time").value;
+  else if (kind === "weekly") { payload.day_of_week = parseInt(el("sched-weekday").value, 10); payload.time_of_day = el("sched-weekly-time").value; }
+  else if (kind === "cron") payload.cron = el("sched-cron").value.trim();
+
+  el("btn-create-sched").disabled = true;
+  try {
+    await api("/scheduler/tasks", { method: "POST", body: JSON.stringify(payload) });
+    el("sched-form-msg").textContent = "✓ Tarea programada.";
+    el("sched-name").value = ""; el("sched-task").value = ""; el("sched-context").value = "";
+    toast("Tarea programada.", "ok");
+    loadScheduler();
+  } catch (e) { el("sched-form-msg").textContent = `✗ ${e.message}`; toast(e.message, "err"); }
+  finally { el("btn-create-sched").disabled = false; }
+}
+
+// --------------------------------------------------------------------------
 // Init
 // --------------------------------------------------------------------------
 function setupSeg(segId, onChange) {
@@ -410,12 +694,22 @@ function setupSeg(segId, onChange) {
 
 document.addEventListener("DOMContentLoaded", () => {
   buildNav();
-  setupSeg("mode-seg", (b) => el("agent-select-wrap").classList.toggle("hidden", b.dataset.mode !== "manual"));
+  setupSeg("mode-seg", applyMode);
+  setupSeg("team-seg", applyTeamKind);
   setupSeg("search-mode");
+  applyMode(); applyTeamKind();
 
   el("agent-select").addEventListener("change", updateAgentHint);
+  el("squad-select").addEventListener("change", updateSquadHint);
   el("btn-route").addEventListener("click", previewRoute);
   el("btn-execute").addEventListener("click", executeTask);
+
+  // Programador
+  el("sched-target-kind").addEventListener("change", applySchedTarget);
+  el("sched-kind").addEventListener("change", applySchedKind);
+  el("btn-create-sched").addEventListener("click", createScheduledTask);
+  el("btn-refresh-sched").addEventListener("click", loadScheduler);
+  applySchedTarget(); applySchedKind();
   el("btn-export-md").addEventListener("click", () => exportExecution("markdown"));
   el("btn-export-html").addEventListener("click", () => exportExecution("html"));
   el("btn-refresh-executions").addEventListener("click", loadExecutions);
@@ -436,6 +730,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => switchView(b.dataset.goto)));
 
-  loadHealth(); loadMetrics(); loadAgents(); loadModels(); loadTools();
+  loadHealth(); loadMetrics(); loadAgents(); loadSquads(); loadModels(); loadTools();
   setInterval(loadHealth, 30000);
 });

@@ -76,12 +76,29 @@
             <div class="seg" id="mode-seg">
               <button class="seg-btn active" data-mode="auto">⚡ Auto</button>
               <button class="seg-btn" data-mode="manual">🎯 Manual</button>
+              <button class="seg-btn" data-mode="team">👥 Equipo</button>
             </div>
 
             <div id="agent-select-wrap" class="hidden">
               <label class="lbl">Agente</label>
               <select id="agent-select" class="input"></select>
               <div class="agent-hint" id="agent-description"></div>
+            </div>
+
+            <div id="squad-select-wrap" class="hidden">
+              <div class="seg sm" id="team-seg">
+                <button class="seg-btn active" data-team="squad">Equipo predefinido</button>
+                <button class="seg-btn" data-team="custom">Personalizado</button>
+              </div>
+              <div id="squad-predef-wrap">
+                <label class="lbl">Equipo</label>
+                <select id="squad-select" class="input"></select>
+                <div class="agent-hint" id="squad-description"></div>
+              </div>
+              <div id="squad-custom-wrap" class="hidden">
+                <label class="lbl">Agentes del equipo <span class="lbl-dim">(en orden, 2+)</span></label>
+                <div id="team-agents" class="checklist"></div>
+              </div>
             </div>
 
             <label class="lbl">Modelo Ollama</label>
@@ -139,6 +156,23 @@
         </div>
       </section>
 
+      <!-- ===== AGENTES ===== -->
+      <section class="view" id="view-agents">
+        <div class="card">
+          <div class="card-head">
+            <h3>Catálogo de agentes especializados</h3>
+            <span class="muted" id="agents-count"></span>
+          </div>
+          <p class="muted">Agentes divididos por áreas. Pulsa «Usar» para lanzarlo en modo manual, o combina varios en un equipo desde el Asistente.</p>
+          <div id="agents-by-area" class="agents-areas"></div>
+        </div>
+        <div class="card">
+          <h3>Equipos predefinidos (squads)</h3>
+          <p class="muted">Varios agentes colaboran en cadena sobre la misma tarea (p. ej. desarrollo: arquitecto → backend → revisor → QA).</p>
+          <div id="squads-list" class="squads-grid"></div>
+        </div>
+      </section>
+
       <!-- ===== EJECUCIONES ===== -->
       <section class="view" id="view-executions">
         <div class="card">
@@ -167,6 +201,113 @@
           <div class="result-output markdown" id="execution-detail-output"></div>
           <details class="acc" open><summary>🧭 Chain-of-Work</summary>
             <ol id="execution-detail-cow" class="cow"></ol></details>
+        </div>
+      </section>
+
+      <!-- ===== PROGRAMADOR ===== -->
+      <section class="view" id="view-scheduler">
+        <div id="scheduler-status" class="sched-banner"></div>
+        <div class="split">
+          <div class="card form-card">
+            <h3>Programar nueva tarea</h3>
+            <label class="lbl">Nombre</label>
+            <input id="sched-name" class="input" placeholder="Ej.: Informe de seguridad semanal" />
+
+            <label class="lbl">Tarea</label>
+            <textarea id="sched-task" class="input" rows="3" placeholder="Instrucción a ejecutar…"></textarea>
+
+            <label class="lbl">Contexto adicional <span class="lbl-dim">(opcional)</span></label>
+            <textarea id="sched-context" class="input" rows="2" placeholder="Datos de apoyo (opcional)"></textarea>
+
+            <label class="lbl">Ejecutar con</label>
+            <select id="sched-target-kind" class="input">
+              <option value="auto">Auto (decide el router)</option>
+              <option value="agent">Un agente concreto</option>
+              <option value="squad">Un equipo predefinido</option>
+              <option value="team">Equipo personalizado</option>
+            </select>
+            <div id="sched-agent-wrap" class="hidden">
+              <select id="sched-agent" class="input"></select>
+            </div>
+            <div id="sched-squad-wrap" class="hidden">
+              <select id="sched-squad" class="input"></select>
+            </div>
+            <div id="sched-team-wrap" class="hidden">
+              <label class="lbl-dim">Agentes (2+):</label>
+              <div id="sched-team-agents" class="checklist"></div>
+            </div>
+
+            <label class="lbl">Periodicidad</label>
+            <select id="sched-kind" class="input">
+              <option value="once">Una vez</option>
+              <option value="interval">Cada X minutos</option>
+              <option value="daily">Cada día (hora)</option>
+              <option value="weekly">Cada semana (día y hora)</option>
+              <option value="cron">Cron (avanzado)</option>
+            </select>
+
+            <div id="sched-once-wrap" class="hidden">
+              <label class="lbl">Fecha y hora</label>
+              <input id="sched-runat" type="datetime-local" class="input" />
+            </div>
+            <div id="sched-interval-wrap" class="hidden">
+              <label class="lbl">Cada (minutos)</label>
+              <input id="sched-interval" type="number" min="1" class="input" value="60" />
+            </div>
+            <div id="sched-daily-wrap" class="hidden">
+              <label class="lbl">Hora (HH:MM)</label>
+              <input id="sched-daily-time" type="time" class="input" value="09:00" />
+            </div>
+            <div id="sched-weekly-wrap" class="hidden">
+              <label class="lbl">Día de la semana</label>
+              <select id="sched-weekday" class="input">
+                <option value="0">Lunes</option><option value="1">Martes</option>
+                <option value="2">Miércoles</option><option value="3">Jueves</option>
+                <option value="4">Viernes</option><option value="5">Sábado</option>
+                <option value="6">Domingo</option>
+              </select>
+              <label class="lbl">Hora (HH:MM)</label>
+              <input id="sched-weekly-time" type="time" class="input" value="09:00" />
+            </div>
+            <div id="sched-cron-wrap" class="hidden">
+              <label class="lbl">Expresión cron <span class="lbl-dim">(min hora dom mes dow)</span></label>
+              <input id="sched-cron" class="input" placeholder="0 9 * * 1" />
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <label class="lbl">Zona horaria</label>
+                <input id="sched-tz" class="input" value="UTC" />
+              </div>
+              <div>
+                <label class="lbl">Modelo</label>
+                <select id="sched-model" class="input"><option value="">(por defecto)</option></select>
+              </div>
+            </div>
+            <label class="check"><input type="checkbox" id="sched-docs" /> Usar mis documentos (RAG)</label>
+
+            <div class="btn-row">
+              <button id="btn-create-sched" class="btn primary">Programar tarea</button>
+            </div>
+            <div id="sched-form-msg" class="muted"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Tareas programadas</h3>
+              <button id="btn-refresh-sched" class="btn ghost sm">↻ Actualizar</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="sched-table">
+                <thead><tr>
+                  <th>Tarea</th><th>Objetivo</th><th>Periodicidad</th>
+                  <th>Próxima</th><th>Estado</th><th>Runs</th><th></th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="sched-detail" class="sched-detail hidden"></div>
+          </div>
         </div>
       </section>
 

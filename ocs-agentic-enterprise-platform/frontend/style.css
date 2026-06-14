@@ -288,3 +288,38 @@ textarea.input { resize: vertical; }
   .nav { flex-direction: row; flex-wrap: wrap; }
   .sidebar-foot { border: none; flex-direction: row; }
 }
+
+/* ---------- Equipos (squads) y multi-selección ---------- */
+.btn.xs { padding: 3px 8px; font-size: 0.72rem; border-radius: 7px; }
+#squad-select-wrap { margin-top: 6px; }
+.checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-soft); border-radius: 10px; padding: 8px; background: var(--bg-2); }
+.chk-item { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text-dim); padding: 3px 4px; border-radius: 6px; cursor: pointer; }
+.chk-item:hover { background: var(--panel); color: var(--text); }
+.chk-item span:first-of-type { flex: 1; }
+.chk-cat { font-size: 0.66rem; color: var(--text-mute); }
+
+/* ---------- Vista Agentes ---------- */
+.agents-areas { display: flex; flex-direction: column; gap: 18px; margin-top: 12px; }
+.area-block > h4 { margin: 0 0 8px; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid var(--border-soft); padding-bottom: 6px; }
+.agent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.agent-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 11px; padding: 12px; }
+.agent-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.agent-card p { color: var(--text-dim); font-size: 0.78rem; margin: 7px 0; }
+.agent-tools { display: flex; flex-wrap: wrap; gap: 4px; }
+.squads-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 10px; }
+.squad-card { background: var(--bg-2); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; }
+.squad-card p { color: var(--text-dim); font-size: 0.8rem; margin: 8px 0; }
+.squad-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.chain-step { background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; padding: 3px 7px; font-size: 0.7rem; }
+.chain-arrow { color: var(--accent); font-weight: 700; }
+
+/* ---------- Programador ---------- */
+.sched-banner { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; color: var(--text-dim); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-mute); display: inline-block; }
+.status-dot.up { background: var(--ok); box-shadow: 0 0 0 3px rgba(45, 212, 167, 0.18); }
+.status-dot.down { background: var(--warn); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sched-actions { white-space: nowrap; }
+.sched-actions .btn { margin-left: 2px; }
+.sched-detail { margin-top: 14px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.sched-detail h4 { margin-bottom: 4px; }
