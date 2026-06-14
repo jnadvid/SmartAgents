@@ -485,7 +485,7 @@ class SettingsUpdate(BaseModel):
     default_ollama_model: str | None = None
     enable_pentest_tools: bool | None = None
     pentest_scope_allowlist: str | None = None
-    pentest_execution_mode: Literal["native", "wsl"] | None = None
+    pentest_execution_mode: Literal["auto", "native", "wsl"] | None = None
     pentest_wsl_distro: str | None = None
     pentest_wsl_user: str | None = None
     pentest_wsl_password: str | None = None

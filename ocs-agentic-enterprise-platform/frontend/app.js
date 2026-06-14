@@ -905,7 +905,7 @@ async function loadSettings() {
     el("set-pentest").checked = s.enable_pentest_tools;
     el("set-scope").value = s.pentest_scope_allowlist || "";
     el("set-mode").value = s.pentest_execution_mode;
-    el("set-distro").value = s.pentest_wsl_distro || "kali-linux";
+    el("set-distro").value = s.pentest_wsl_distro || "";
     el("set-wsl-user").value = s.pentest_wsl_user || "";
     el("set-wsl-pass").placeholder = s.pentest_wsl_password_set ? "(configurada · sin cambios)" : "(sin definir)";
     // Email
@@ -940,7 +940,7 @@ async function saveSettings() {
     enable_pentest_tools: el("set-pentest").checked,
     pentest_scope_allowlist: el("set-scope").value.trim(),
     pentest_execution_mode: el("set-mode").value,
-    pentest_wsl_distro: el("set-distro").value.trim() || "kali-linux",
+    pentest_wsl_distro: el("set-distro").value.trim(),
     pentest_wsl_user: el("set-wsl-user").value.trim(),
     smtp_host: el("set-smtp-host").value.trim(),
     smtp_port: parseInt(el("set-smtp-port").value, 10) || 587,

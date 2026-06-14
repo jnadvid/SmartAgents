@@ -37,7 +37,7 @@ EDITABLE: dict[str, type] = {
 }
 # Claves secretas: se persisten y usan, pero NUNCA se devuelven por la API ni se loguean.
 SECRET_KEYS = frozenset({"pentest_wsl_password", "smtp_password"})
-_MODES = ("native", "wsl")
+_MODES = ("auto", "native", "wsl")
 
 
 def is_secret(key: str) -> bool:
@@ -87,6 +87,19 @@ def scope_entries() -> list[str]:
     return [entry.strip().lower() for entry in raw.split(",") if entry.strip()]
 
 
+def effective_execution_mode() -> str:
+    """Resuelve el modo de ejecución. 'auto' = WSL si hay Windows + WSL, si no nativo."""
+    mode = str(effective("pentest_execution_mode") or "auto").lower()
+    if mode != "auto":
+        return mode
+    import platform
+    import shutil
+
+    if platform.system() == "Windows" and shutil.which("wsl") is not None:
+        return "wsl"
+    return "native"
+
+
 def _coerce(key: str, value: Any) -> Any:
     expected = EDITABLE[key]
     if expected is bool:
@@ -110,7 +123,7 @@ def validate(changes: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"Ajuste no editable: '{key}'.")
         coerced = _coerce(key, value)
         if key == "pentest_execution_mode" and coerced not in _MODES:
-            raise ValueError("pentest_execution_mode debe ser 'native' o 'wsl'.")
+            raise ValueError("pentest_execution_mode debe ser 'auto', 'native' o 'wsl'.")
         if key == "pentest_wsl_distro" and not str(coerced).replace("-", "").replace(".", "").replace("_", "").isalnum():
             raise ValueError("Nombre de distribución WSL inválido.")
         if key == "smtp_port" and not (1 <= int(coerced) <= 65535):

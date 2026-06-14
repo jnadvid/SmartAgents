@@ -470,13 +470,14 @@
               <div>
                 <label class="lbl">Entorno de ejecución</label>
                 <select id="set-mode" class="input">
-                  <option value="native">Nativo (Linux/Kali del host)</option>
+                  <option value="auto">Auto (WSL/Kali en Windows)</option>
                   <option value="wsl">WSL (Windows + Kali)</option>
+                  <option value="native">Nativo (Linux/Kali del host)</option>
                 </select>
               </div>
               <div>
-                <label class="lbl">Distro WSL</label>
-                <input id="set-distro" class="input" value="kali-linux" />
+                <label class="lbl">Distro WSL <span class="lbl-dim">(vacío = por defecto)</span></label>
+                <input id="set-distro" class="input" placeholder="(distro por defecto, p. ej. kali-linux)" />
               </div>
             </div>
             <div class="form-grid">
